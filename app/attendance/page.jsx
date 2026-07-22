@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import Sidebar from "@/components/Sidebar";
 import { markAttendance } from "./actions";
 
+export const dynamic = "force-dynamic";
+
 export default async function AttendancePage({ searchParams }) {
   const supabase = createClient();
   const selectedClassroomId = searchParams?.classroomId;
@@ -49,7 +51,7 @@ export default async function AttendancePage({ searchParams }) {
   return (
     <div className="flex">
       <Sidebar />
-      <main className="flex-1 p-5 sm:p-8 max-w-3xl">
+      <main className="flex-1 p-5 sm:p-8 pb-24 sm:pb-8 max-w-3xl">
         <h1 className="font-display text-2xl font-semibold text-ink mb-1">Attendance register</h1>
         <p className="text-stone-500 text-sm mb-6">
           Pick a class, then stamp each student present or absent for today ({today}).
