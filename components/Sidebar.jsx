@@ -8,6 +8,8 @@ const NAV = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/students", label: "Enrollment" },
   { href: "/attendance", label: "Attendance" },
+  { href: "/grades", label: "Grades" },
+  { href: "/report-card", label: "Report card" },
   { href: "/fees", label: "Fees" },
 ];
 
@@ -52,28 +54,30 @@ export default function Sidebar() {
       </aside>
 
       {/* Mobile top bar */}
-      <div className="sm:hidden flex items-center justify-between px-4 py-3 border-b border-stone-200 bg-white">
-        <p className="font-display text-base font-semibold text-pine">Barima Dua</p>
+      <div className="sm:hidden sticky top-0 z-20 bg-paper border-b border-stone-200 px-4 py-3 flex items-center justify-between">
+        <p className="font-display text-base font-semibold text-pine leading-tight">Barima Dua</p>
         <button onClick={signOut} className="text-xs text-stone-400">
           Sign out
         </button>
       </div>
 
-      {/* Mobile bottom navigation */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 flex justify-around py-2 z-10">
+      {/* Mobile scrollable nav */}
+      <nav className="sm:hidden sticky top-[49px] z-20 bg-white border-b border-stone-200 flex overflow-x-auto gap-1 px-3 py-2">
         {NAV.map(({ href, label }) => (
           <Link
             key={href}
             href={href}
-            className={`flex flex-col items-center gap-0.5 px-2 py-1 text-[10px] font-medium ${
-              pathname === href ? "text-pine" : "text-stone-400"
+            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border ${
+              pathname === href
+                ? "bg-pine text-paper border-pine"
+                : "text-stone-500 border-stone-300"
             }`}
           >
             {label}
           </Link>
         ))}
       </nav>
-      <div className="sm:hidden h-16 shrink-0" />
+      <div className="sm:hidden h-2 shrink-0" />
     </>
   );
 }
