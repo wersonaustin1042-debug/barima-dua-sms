@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import Sidebar from "@/components/Sidebar";
+import AutoSubmitSelect from "@/components/AutoSubmitSelect";
 import {
-  ensureRecurringFees,
+  ensureFeeSetup,
   recordInstallment,
   changeFrequency,
   recordRecurringPayment,
@@ -40,7 +41,7 @@ export default async function FeesPage({ searchParams }) {
   let paidPeriodsByFee = {};
 
   if (selectedStudentId) {
-    await ensureRecurringFees(selectedStudentId);
+    await ensureFeeSetup(selectedStudentId);
 
     const { data: planData } = await supabase
       .from("tuition_plans")
@@ -68,8 +69,8 @@ export default async function FeesPage({ searchParams }) {
     }
   }
 
-  const balance = plan ? plan.total_amount - plan.amount_paid : 0;
-  const pct = plan ? Math.round((plan.amount_paid / plan.total_amount) * 100) : 0;
+  const balance = plan ? Number(plan.total_amount) - Number(plan.amount_paid) : 0;
+  const pct = plan ? Math.round((Number(plan.amount_paid) / Number(plan.total_amount)) * 100) : 0;
 
   return (
     <div className="flex">
@@ -81,24 +82,18 @@ export default async function FeesPage({ searchParams }) {
         </p>
 
         <form method="GET" className="mb-6">
-          <select
+          <AutoSubmitSelect
             name="studentId"
             defaultValue={selectedStudentId || ""}
-            onChange={(e) => e.target.form.requestSubmit()}
             className="w-full max-w-sm rounded-lg border border-stone-300 px-3 py-2 text-sm"
-          >
-            <option value="" disabled>
-              Select a student
-            </option>
-            {(students || []).map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.full_name} — {s.classrooms?.academic_levels?.name} {s.classrooms?.section}
-              </option>
-            ))}
-          </select>
-          <noscript>
-            <button type="submit">Go</button>
-          </noscript>
+            options={[
+              { value: "", label: "Select a student", disabled: true },
+              ...(students || []).map((s) => ({
+                value: s.id,
+                label: `${s.full_name} — ${s.classrooms?.academic_levels?.name} ${s.classrooms?.section}`,
+              })),
+            ]}
+          />
         </form>
 
         {selectedStudentId && plan && (
@@ -131,6 +126,7 @@ export default async function FeesPage({ searchParams }) {
                     name="amount"
                     min="1"
                     max={balance}
+                    step="0.01"
                     required
                     placeholder={`Amount (up to GHS ${balance})`}
                     className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm"
@@ -166,20 +162,22 @@ export default async function FeesPage({ searchParams }) {
                     <span className="text-xs text-stone-400">GHS {fee.amount} · billed</span>
                     <form action={changeFrequency}>
                       <input type="hidden" name="feeId" value={fee.id} />
-                      <select
+                      <AutoSubmitSelect
                         name="frequency"
                         defaultValue={fee.frequency}
-                        onChange={(e) => e.target.form.requestSubmit()}
                         className="text-xs rounded-lg border border-stone-300 px-2 py-1"
-                      >
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                      </select>
+                        options={[
+                          { value: "daily", label: "Daily" },
+                          { value: "weekly", label: "Weekly" },
+                          { value: "monthly", label: "Monthly" },
+                        ]}
+                      />
                     </form>
                   </div>
                   <p className="text-xs text-stone-400">
-                    {isPaid ? `Covered for ${periodLabel(fee.frequency)}` : `Not yet paid for ${periodLabel(fee.frequency)}`}
+                    {isPaid
+                      ? `Covered for ${periodLabel(fee.frequency)}`
+                      : `Not yet paid for ${periodLabel(fee.frequency)}`}
                   </p>
                   {!isPaid && (
                     <form action={recordRecurringPayment}>
