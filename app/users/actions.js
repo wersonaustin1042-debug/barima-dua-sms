@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 
-export async function createStaffUser(formData) {
+export async function createStaffUser(prevState, formData) {
   const supabase = createClient();
   const admin = createAdminClient();
 
@@ -16,7 +16,9 @@ export async function createStaffUser(formData) {
   const classroomId = formData.get("classroomId") || null;
   const studentId = formData.get("studentId") || null;
 
-  if (!fullName || !email || !password || !role) return;
+  if (!fullName || !email || !password || !role) {
+    return { error: "Please fill in name, email, password, and role." };
+  }
 
   const { data: created, error } = await admin.auth.admin.createUser({
     email,
@@ -25,18 +27,21 @@ export async function createStaffUser(formData) {
   });
 
   if (error || !created?.user) {
-    console.error("createStaffUser error:", error?.message);
-    return;
+    return { error: error?.message || "Could not create the login." };
   }
 
   const newUserId = created.user.id;
 
-  await supabase.from("profiles").insert({
+  const { error: profileError } = await supabase.from("profiles").insert({
     id: newUserId,
     full_name: fullName,
     phone,
     role,
   });
+
+  if (profileError) {
+    return { error: `Login created but profile failed: ${profileError.message}` };
+  }
 
   if (role === "teacher" && classroomId) {
     await supabase.from("classrooms").update({ class_teacher_id: newUserId }).eq("id", classroomId);
@@ -47,6 +52,7 @@ export async function createStaffUser(formData) {
   }
 
   revalidatePath("/users");
+  return { success: `Created login for ${fullName}.` };
 }
 
 // Links an existing parent account to another child (for parents with more than one kid at the school)
