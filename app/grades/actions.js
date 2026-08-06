@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-const DEFAULT_TOTALS = {
+const TOTALS = {
   "Class Exercise/Assignment": 10,
   "Mid-term": 20,
   "End-of-term": 70,
@@ -19,53 +19,60 @@ function gradeFor(score, total) {
   return "F";
 }
 
-// Creates the exam if it doesn't exist yet, then redirects the page to it via query params
-export async function findOrCreateExam(formData) {
+export async function addSubject(formData) {
   const supabase = createClient();
-  const classroomId = formData.get("classroomId");
-  const subjectName = formData.get("subjectName")?.trim();
-  const term = formData.get("term");
-  const examType = formData.get("examType");
-  const totalMarks = DEFAULT_TOTALS[examType] || 100;
-
-  if (!subjectName) return;
-
-  await supabase.from("exams").upsert(
-    {
-      classroom_id: classroomId,
-      subject_name: subjectName,
-      term,
-      exam_type: examType,
-      total_marks: totalMarks,
-    },
-    { onConflict: "classroom_id,subject_name,term,exam_type" }
-  );
-
+  const name = formData.get("name")?.trim();
+  const category = formData.get("category") || "primary_jhs";
+  if (!name) return;
+  await supabase.from("subjects").insert({ name, category }).select().single();
   revalidatePath("/grades");
 }
 
-export async function saveResults(formData) {
+// Saves Class Exercise/Assignment, Mid-term, and End-of-term marks for every student in one go
+export async function saveAllMarks(formData) {
   const supabase = createClient();
-  const examId = formData.get("examId");
-  const totalMarks = Number(formData.get("totalMarks"));
+  const classroomId = formData.get("classroomId");
+  const subjectName = formData.get("subjectName");
+  const term = formData.get("term");
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Ensure the three exam rows exist for this subject/term/classroom, and get their ids
+  const examIds = {};
+  for (const [examType, totalMarks] of Object.entries(TOTALS)) {
+    const { data: examRow } = await supabase
+      .from("exams")
+      .upsert(
+        { classroom_id: classroomId, subject_name: subjectName, term, exam_type: examType, total_marks: totalMarks },
+        { onConflict: "classroom_id,subject_name,term,exam_type" }
+      )
+      .select("id")
+      .single();
+    if (examRow) examIds[examType] = examRow.id;
+  }
+
+  const prefixToType = { ca: "Class Exercise/Assignment", mid: "Mid-term", end: "End-of-term" };
   const rows = [];
+
   for (const [key, value] of formData.entries()) {
-    if (key.startsWith("score_") && value !== "") {
-      const studentId = key.replace("score_", "");
-      const score = Number(value);
-      rows.push({
-        exam_id: examId,
-        student_id: studentId,
-        score,
-        grade: gradeFor(score, totalMarks),
-        recorded_by: user?.id,
-      });
-    }
+    if (value === "") continue;
+    const [prefix, studentId] = key.split("__");
+    if (!prefixToType[prefix] || !studentId) continue;
+
+    const examType = prefixToType[prefix];
+    const examId = examIds[examType];
+    if (!examId) continue;
+
+    const score = Number(value);
+    rows.push({
+      exam_id: examId,
+      student_id: studentId,
+      score,
+      grade: gradeFor(score, TOTALS[examType]),
+      recorded_by: user?.id,
+    });
   }
 
   if (rows.length > 0) {
