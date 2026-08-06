@@ -1,28 +1,52 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-const NAV = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/students", label: "Enrollment" },
-  { href: "/attendance", label: "Attendance" },
-  { href: "/grades", label: "Grades" },
-  { href: "/report-card", label: "Report card" },
-  { href: "/fees", label: "Fees" },
+const ADMIN_LIKE = ["admin", "director", "headmaster", "assistant_headmaster"];
+
+const ALL_NAV = [
+  { href: "/dashboard", label: "Dashboard", roles: [...ADMIN_LIKE, "accountant"] },
+  { href: "/students", label: "Enrollment", roles: ADMIN_LIKE },
+  { href: "/attendance", label: "Attendance", roles: [...ADMIN_LIKE, "teacher"] },
+  { href: "/grades", label: "Grades", roles: [...ADMIN_LIKE, "teacher"] },
+  { href: "/report-card", label: "Report card", roles: [...ADMIN_LIKE, "teacher"] },
+  { href: "/fees", label: "Fees", roles: [...ADMIN_LIKE, "accountant"] },
+  { href: "/users", label: "Staff & parents", roles: ADMIN_LIKE },
+  { href: "/parent", label: "My children", roles: ["parent"] },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
+  const [role, setRole] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    async function loadRole() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+      if (active && profile) setRole(profile.role);
+    }
+    loadRole();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function signOut() {
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
   }
+
+  const nav = role ? ALL_NAV.filter((item) => item.roles.includes(role)) : [];
 
   return (
     <>
@@ -33,7 +57,7 @@ export default function Sidebar() {
           <p className="text-[11px] text-stone-400 mt-0.5">Creche — JHS 3</p>
         </div>
         <nav className="space-y-1 flex-1">
-          {NAV.map(({ href, label }) => (
+          {nav.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
@@ -45,10 +69,7 @@ export default function Sidebar() {
             </Link>
           ))}
         </nav>
-        <button
-          onClick={signOut}
-          className="text-sm text-stone-400 hover:text-clay text-left px-3 py-2"
-        >
+        <button onClick={signOut} className="text-sm text-stone-400 hover:text-clay text-left px-3 py-2">
           Sign out
         </button>
       </aside>
@@ -63,14 +84,12 @@ export default function Sidebar() {
 
       {/* Mobile scrollable nav */}
       <nav className="sm:hidden sticky top-[49px] z-20 bg-white border-b border-stone-200 flex overflow-x-auto gap-1 px-3 py-2">
-        {NAV.map(({ href, label }) => (
+        {nav.map(({ href, label }) => (
           <Link
             key={href}
             href={href}
             className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border ${
-              pathname === href
-                ? "bg-pine text-paper border-pine"
-                : "text-stone-500 border-stone-300"
+              pathname === href ? "bg-pine text-paper border-pine" : "text-stone-500 border-stone-300"
             }`}
           >
             {label}

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+const ADMIN_LIKE = ["admin", "director", "headmaster", "assistant_headmaster"];
+
 export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -16,13 +18,29 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      setLoading(false);
       setError(error.message);
       return;
     }
-    router.push("/dashboard");
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", data.user.id)
+      .single();
+
+    setLoading(false);
+
+    let destination = "/dashboard";
+    if (profile?.role === "parent") destination = "/parent";
+    else if (profile?.role === "accountant") destination = "/fees";
+    else if (profile?.role === "teacher") destination = "/attendance";
+    else if (ADMIN_LIKE.includes(profile?.role)) destination = "/dashboard";
+
+    router.push(destination);
     router.refresh();
   }
 
@@ -30,7 +48,6 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          {/* Replace /logo.png in the /public folder with the school logo */}
           <img
             src="/logo.png"
             alt="Barima Dua Memorial School"
