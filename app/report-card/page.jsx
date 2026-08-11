@@ -373,64 +373,42 @@ export default async function ReportCardPage({ searchParams }) {
             </Link>
 
             {/* Header */}
-            <div className="text-center border-b-2 border-pine pb-3 mb-4">
+            <div className="text-center pb-2 mb-3">
               <img src="/logo.png" alt="" className="h-16 w-16 mx-auto mb-1 object-contain" />
-              <p className="font-display text-lg font-bold text-pine leading-tight">BARIMA DUAH MEMORIAL SCHOOL</p>
-              <p className="text-[11px] text-stone-500">(Founded and Supported by ABAK FOUNDATION GHANA - NGO)</p>
-              <p className="text-[11px] text-stone-500">Location: Kumasi Sokoban Timpomu — Contact: 0246-731605</p>
-              <p className="text-sm font-semibold text-ink mt-2 uppercase tracking-wide">Pupil's Report Card</p>
+              <p className="font-display text-base font-bold text-ink leading-tight">BARIMA DUAH MEMORIAL SCHOOL</p>
+              <p className="text-[10px] text-stone-500 leading-tight">(Founded and Supported by ABAK FOUNDATION GHANA - NGO)</p>
+              <p className="text-[10px] text-stone-500 leading-tight">Location: Kumasi Sokoban Timpomu — Contact: 0246-731605</p>
+              <p className="text-sm font-semibold text-ink mt-1.5 uppercase tracking-wide">Pupil's Report Card</p>
             </div>
 
-            {/* Student info block */}
-            <div className="text-sm space-y-1 mb-4 border border-stone-200 rounded-lg p-3">
+            {/* Top info: name/class/total, term/roll/position, date/next term */}
+            <div className="text-[13px] leading-relaxed border-y border-stone-300 py-2 mb-3">
               <p>
-                <span className="text-stone-500">Name: </span>
+                <span className="text-stone-500">NAME: </span>
                 <span className="font-semibold text-ink uppercase">{detail.studentInfo?.full_name}</span>
-                <span className="text-stone-500 ml-4">Class: </span>
+                <span className="text-stone-500 ml-3">CLASS: </span>
                 <span className="font-medium text-ink">{activeClassroom.academic_levels.name} {activeClassroom.section}</span>
-                <span className="text-stone-500 ml-4">Total score: </span>
+                <span className="text-stone-500 ml-3">TOTAL SCORE: </span>
                 <span className="font-medium text-ink">{detail.overallTotal}</span>
               </p>
               <p>
-                <span className="text-stone-500">Term: </span>
+                <span className="text-stone-500">TERM: </span>
                 <span className="font-medium text-ink">{selectedTerm} — {academicYear(now)} Academic Year</span>
-                <span className="text-stone-500 ml-4">No. on roll: </span>
+                <span className="text-stone-500 ml-3">NO. ON ROLL: </span>
                 <span className="font-medium text-ink">{detail.classSize}</span>
-                <span className="text-stone-500 ml-4">Position in class: </span>
+                <span className="text-stone-500 ml-3">POSITION IN CLASS: </span>
                 <span className="font-medium text-ink">{detail.overallPosition}</span>
               </p>
               <p>
-                <span className="text-stone-500">Date: </span>
+                <span className="text-stone-500">DATE: </span>
                 <span className="font-medium text-ink">{formatFullDate(now)}</span>
-                <span className="text-stone-500 ml-4">Next term begins: </span>
+                <span className="text-stone-500 ml-3">NEXT TERM BEGINS: </span>
                 <span className="font-medium text-ink">{termInfo?.reopening_date || "—"}</span>
-              </p>
-              <p>
-                <span className="text-stone-500">Attendance: </span>
-                <span className="font-medium text-ink">{detail.presentDays}</span>
-                <span className="text-stone-500 ml-4">Out of total of: </span>
-                <span className="font-medium text-ink">{detail.totalDays}</span>
-                <span className="text-stone-500 ml-4">Promoted to: </span>
-                <span className="font-medium text-ink">{detail.promotedTo}</span>
-              </p>
-              <p>
-                <span className="text-stone-500">Attitude: </span>
-                <span className="font-medium text-ink">{detail.remarks?.attitude || "—"}</span>
-                <span className="text-stone-500 ml-4">Interest / hobby: </span>
-                <span className="font-medium text-ink">{detail.remarks?.interests || "—"}</span>
-              </p>
-              <p>
-                <span className="text-stone-500">Teacher's remark: </span>
-                <span className="font-medium text-ink">{detail.remarks?.teacher_remarks || "—"}</span>
-              </p>
-              <p>
-                <span className="text-stone-500">Head teacher's remark: </span>
-                <span className="font-medium text-ink">{detail.remarks?.headteacher_remarks || "—"}</span>
               </p>
             </div>
 
             {/* Subjects table */}
-            <table className="w-full text-xs mb-4 border border-stone-300">
+            <table className="w-full text-xs mb-3 border border-stone-300">
               <thead className="bg-pine/10 text-ink uppercase">
                 <tr>
                   <th className="text-left px-2 py-1.5 border border-stone-300">Subject</th>
@@ -455,49 +433,69 @@ export default async function ReportCardPage({ searchParams }) {
               </tbody>
             </table>
 
-            {/* Bills */}
-            <div className="border border-stone-300 rounded-lg overflow-hidden mb-4">
-              <p className="bg-pine/10 text-xs font-semibold text-ink uppercase px-3 py-1.5">
-                {selectedTerm === "Term 3" ? "1st" : selectedTerm === "Term 1" ? "2nd" : "3rd"} Term {academicYear(now)} Academic Year — Bills
+            {/* Bottom info: attendance/promoted, attitude/interest, remarks */}
+            <div className="text-[13px] leading-relaxed border-y border-stone-300 py-2 mb-3">
+              <p>
+                <span className="text-stone-500">ATTENDANCE: </span>
+                <span className="font-medium text-ink">{detail.presentDays}</span>
+                <span className="text-stone-500 ml-3">OUT OF TOTAL OF: </span>
+                <span className="font-medium text-ink">{detail.totalDays}</span>
+                <span className="text-stone-500 ml-3">PROMOTED TO: </span>
+                <span className="font-medium text-ink">{detail.promotedTo}</span>
               </p>
-              <form action={saveRemarks} className="p-3 space-y-2">
-                <input type="hidden" name="studentId" value={selectedStudentId} />
-                <input type="hidden" name="term" value={selectedTerm} />
-                <input type="hidden" name="attitude" value={detail.remarks?.attitude || ""} />
-                <input type="hidden" name="interests" value={detail.remarks?.interests || ""} />
-                <input type="hidden" name="teacherRemarks" value={detail.remarks?.teacher_remarks || ""} />
-                <input type="hidden" name="headteacherRemarks" value={detail.remarks?.headteacher_remarks || ""} />
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-stone-500">New bill for next term:</span>
-                  <div className="flex items-center gap-1">
-                    <span className="text-ink font-medium">Gh₵</span>
-                    <input
-                      type="number"
-                      name="nextTermBill"
-                      step="0.01"
-                      defaultValue={detail.nextTermBill}
-                      placeholder="0.00"
-                      className="w-24 rounded-lg border border-stone-300 px-2 py-1 text-sm text-right"
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-stone-500">Old arrears / debt (as at this vacation day):</span>
-                  <span className="font-medium text-clay">Gh₵ {detail.balance}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm pt-2 border-t border-stone-200">
-                  <span className="font-semibold text-ink">Total termly bill to pay:</span>
-                  <span className="font-display font-semibold text-ink">
-                    Gh₵ {(detail.balance + Number(detail.nextTermBill || 0)).toFixed(2)}
-                  </span>
-                </div>
-                <button type="submit" className="text-xs font-medium bg-pine text-paper px-3 py-1.5 rounded-lg hover:bg-pine/90 mt-1">
-                  Save
-                </button>
-              </form>
+              <p>
+                <span className="text-stone-500">ATTITUDE: </span>
+                <span className="font-medium text-ink">{detail.remarks?.attitude || "—"}</span>
+                <span className="text-stone-500 ml-3">INTEREST / HOBBY: </span>
+                <span className="font-medium text-ink">{detail.remarks?.interests || "—"}</span>
+              </p>
+              <p>
+                <span className="text-stone-500">TEACHER'S REMARK: </span>
+                <span className="font-medium text-ink">{detail.remarks?.teacher_remarks || "—"}</span>
+              </p>
+              <p>
+                <span className="text-stone-500">HEAD TEACHER'S REMARK: </span>
+                <span className="font-medium text-ink">{detail.remarks?.headteacher_remarks || "—"}</span>
+              </p>
             </div>
 
-            {/* Editable remarks (admin/teacher only, kept separate from the printed-style card above) */}
+            {/* Bills */}
+            <p className="text-xs font-semibold text-ink uppercase mb-1.5">
+              {selectedTerm === "Term 3" ? "1st" : selectedTerm === "Term 1" ? "2nd" : "3rd"} Term {academicYear(now)} Academic Year — Bills:
+            </p>
+            <form action={saveRemarks} className="text-[13px] space-y-1 mb-3">
+              <input type="hidden" name="studentId" value={selectedStudentId} />
+              <input type="hidden" name="term" value={selectedTerm} />
+              <input type="hidden" name="attitude" value={detail.remarks?.attitude || ""} />
+              <input type="hidden" name="interests" value={detail.remarks?.interests || ""} />
+              <input type="hidden" name="teacherRemarks" value={detail.remarks?.teacher_remarks || ""} />
+              <input type="hidden" name="headteacherRemarks" value={detail.remarks?.headteacher_remarks || ""} />
+              <p className="flex items-center gap-2">
+                <span className="text-stone-500">NEW BILL FOR NEXT TERM:</span>
+                <span className="text-ink font-medium">Gh₵</span>
+                <input
+                  type="number"
+                  name="nextTermBill"
+                  step="0.01"
+                  defaultValue={detail.nextTermBill}
+                  placeholder="0.00"
+                  className="w-24 rounded border border-stone-300 px-2 py-0.5 text-sm"
+                />
+              </p>
+              <p>
+                <span className="text-stone-500">OLD ARREARS/DEBT (As at this vacation day): </span>
+                <span className="font-medium text-clay">Gh₵ {detail.balance}</span>
+              </p>
+              <p className="font-semibold">
+                <span className="text-ink">Total Termly Bill to Pay: </span>
+                <span className="text-ink">Gh₵ {(detail.balance + Number(detail.nextTermBill || 0)).toFixed(2)}</span>
+              </p>
+              <button type="submit" className="text-xs font-medium bg-pine text-paper px-3 py-1.5 rounded-lg hover:bg-pine/90 mt-1">
+                Save
+              </button>
+            </form>
+
+            {/* Editable remarks (kept separate from the printed-style card above) */}
             <details className="mb-4">
               <summary className="text-xs text-stone-400 cursor-pointer">Edit attitude / interests / remarks</summary>
               <form action={saveRemarks} className="space-y-2 mt-2">
@@ -515,8 +513,8 @@ export default async function ReportCardPage({ searchParams }) {
             </details>
 
             {/* Signature */}
-            <div className="pt-4 mt-2 border-t border-stone-200">
-              <p className="text-sm text-ink mb-6">Director's Signature: ___________________________________</p>
+            <div className="pt-2">
+              <p className="text-sm text-ink mb-4">DIRECTOR'S SIGNATURE: ___________________________________</p>
               <p className="text-[11px] font-semibold text-clay text-center uppercase">
                 Amount paid are not refundable under any condition
               </p>
