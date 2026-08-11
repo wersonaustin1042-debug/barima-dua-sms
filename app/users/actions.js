@@ -13,7 +13,6 @@ export async function createStaffUser(prevState, formData) {
   const password = formData.get("password");
   const role = formData.get("role");
   const phone = formData.get("phone")?.trim() || null;
-  const classroomId = formData.get("classroomId") || null;
   const studentId = formData.get("studentId") || null;
 
   if (!fullName || !email || !password || !role) {
@@ -43,8 +42,13 @@ export async function createStaffUser(prevState, formData) {
     return { error: `Login created but profile failed: ${profileError.message}` };
   }
 
-  if (role === "teacher" && classroomId) {
-    await supabase.from("classrooms").update({ class_teacher_id: newUserId }).eq("id", classroomId);
+  if (role === "teacher") {
+    const classroomIds = formData.getAll("classroomIds").filter(Boolean);
+    if (classroomIds.length > 0) {
+      await supabase
+        .from("teacher_classrooms")
+        .insert(classroomIds.map((id) => ({ teacher_id: newUserId, classroom_id: id })));
+    }
   }
 
   if (role === "parent" && studentId) {
@@ -66,12 +70,28 @@ export async function linkParentToChild(formData) {
   revalidatePath("/users");
 }
 
-export async function assignTeacherToClassroom(formData) {
+export async function assignTeacherToClassrooms(formData) {
+  const supabase = createClient();
+  const teacherId = formData.get("teacherId");
+  const classroomIds = formData.getAll("classroomIds").filter(Boolean);
+  if (!teacherId || classroomIds.length === 0) return;
+
+  await supabase
+    .from("teacher_classrooms")
+    .insert(classroomIds.map((id) => ({ teacher_id: teacherId, classroom_id: id })));
+  revalidatePath("/users");
+}
+
+export async function unassignTeacherFromClassroom(formData) {
   const supabase = createClient();
   const teacherId = formData.get("teacherId");
   const classroomId = formData.get("classroomId");
   if (!teacherId || !classroomId) return;
 
-  await supabase.from("classrooms").update({ class_teacher_id: teacherId }).eq("id", classroomId);
+  await supabase
+    .from("teacher_classrooms")
+    .delete()
+    .eq("teacher_id", teacherId)
+    .eq("classroom_id", classroomId);
   revalidatePath("/users");
 }

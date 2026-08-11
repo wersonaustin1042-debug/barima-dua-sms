@@ -47,16 +47,19 @@ export default function CreateUserForm({ classrooms, students }) {
             <option value="director">Director</option>
           </select>
         </div>
-        <div>
-          <label className="text-xs font-medium text-stone-500">If Teacher — assign class (optional)</label>
-          <select name="classroomId" className="w-full mt-1 rounded-lg border border-stone-300 px-3 py-2 text-sm">
-            <option value="">— none —</option>
+        <div className="col-span-2">
+          <label className="text-xs font-medium text-stone-500">If Teacher — assign classes (optional, pick as many as they teach)</label>
+          <div className="mt-1 flex flex-wrap gap-2">
             {classrooms.map((c) => (
-              <option key={c.id} value={c.id}>
+              <label
+                key={c.id}
+                className="flex items-center gap-1.5 text-xs bg-stone-50 border border-stone-200 rounded-lg px-2 py-1.5 cursor-pointer"
+              >
+                <input type="checkbox" name="classroomIds" value={c.id} className="accent-pine" />
                 {c.academic_levels.name} {c.section}
-              </option>
+              </label>
             ))}
-          </select>
+          </div>
         </div>
         <div>
           <label className="text-xs font-medium text-stone-500">If Parent — link to child (optional)</label>

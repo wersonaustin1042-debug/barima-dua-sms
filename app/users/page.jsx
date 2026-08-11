@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import Sidebar from "@/components/Sidebar";
-import { linkParentToChild, assignTeacherToClassroom } from "./actions";
+import { linkParentToChild, assignTeacherToClassrooms, unassignTeacherFromClassroom } from "./actions";
 import CreateUserForm from "./CreateUserForm";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +25,7 @@ export default async function UsersPage() {
 
   const { data: classroomsRaw } = await supabase
     .from("classrooms")
-    .select("id, section, class_teacher_id, academic_levels(name, sort_order)");
+    .select("id, section, academic_levels(name, sort_order)");
   const classrooms = (classroomsRaw || []).sort(
     (a, b) =>
       a.academic_levels.sort_order - b.academic_levels.sort_order ||
@@ -37,6 +37,19 @@ export default async function UsersPage() {
     .select("id, full_name")
     .eq("status", "active")
     .order("full_name");
+
+  const { data: teacherAssignments } = await supabase
+    .from("teacher_classrooms")
+    .select("teacher_id, classroom_id, classrooms(section, academic_levels(name))");
+
+  const assignmentsByTeacher = {};
+  (teacherAssignments || []).forEach((a) => {
+    if (!assignmentsByTeacher[a.teacher_id]) assignmentsByTeacher[a.teacher_id] = [];
+    assignmentsByTeacher[a.teacher_id].push({
+      classroomId: a.classroom_id,
+      label: `${a.classrooms?.academic_levels?.name} ${a.classrooms?.section}`,
+    });
+  });
 
   const teachers = (profiles || []).filter((p) => p.role === "teacher");
   const parents = (profiles || []).filter((p) => p.role === "parent");
@@ -50,10 +63,8 @@ export default async function UsersPage() {
           Create logins for staff and parents, and assign teachers to classes.
         </p>
 
-        {/* Create new user */}
         <CreateUserForm classrooms={classrooms} students={students || []} />
 
-        {/* Link parent to another child */}
         <details className="mb-6">
           <summary className="text-xs text-stone-400 cursor-pointer">Link an existing parent to another child</summary>
           <form action={linkParentToChild} className="flex flex-wrap gap-2 mt-2">
@@ -75,26 +86,61 @@ export default async function UsersPage() {
           </form>
         </details>
 
-        {/* Reassign a teacher's class */}
-        <details className="mb-6">
-          <summary className="text-xs text-stone-400 cursor-pointer">Assign / reassign a teacher's class</summary>
-          <form action={assignTeacherToClassroom} className="flex flex-wrap gap-2 mt-2">
-            <select name="teacherId" required className="rounded-lg border border-stone-300 px-3 py-2 text-sm">
-              <option value="">Select teacher</option>
+        {/* Assign more classes to an existing teacher */}
+        <details className="mb-6" open>
+          <summary className="text-sm font-medium text-ink cursor-pointer">Teacher class assignments</summary>
+          <div className="mt-3 space-y-4">
+            <form action={assignTeacherToClassrooms} className="bg-white rounded-xl border border-stone-200 p-4 space-y-3">
+              <p className="text-xs font-medium text-stone-500">Assign classes to a teacher</p>
+              <select name="teacherId" required className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm">
+                <option value="">Select teacher</option>
+                {teachers.map((t) => (
+                  <option key={t.id} value={t.id}>{t.full_name}</option>
+                ))}
+              </select>
+              <div className="flex flex-wrap gap-2">
+                {classrooms.map((c) => (
+                  <label key={c.id} className="flex items-center gap-1.5 text-xs bg-stone-50 border border-stone-200 rounded-lg px-2 py-1.5 cursor-pointer">
+                    <input type="checkbox" name="classroomIds" value={c.id} className="accent-pine" />
+                    {c.academic_levels.name} {c.section}
+                  </label>
+                ))}
+              </div>
+              <button type="submit" className="text-xs font-medium bg-pine text-paper px-3 py-2 rounded-lg hover:bg-pine/90">
+                Assign selected classes
+              </button>
+            </form>
+
+            {/* Current assignments per teacher, with remove option */}
+            <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
               {teachers.map((t) => (
-                <option key={t.id} value={t.id}>{t.full_name}</option>
+                <div key={t.id} className="p-3">
+                  <p className="text-xs font-medium text-ink mb-1.5">{t.full_name}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(assignmentsByTeacher[t.id] || []).map((a) => (
+                      <form key={a.classroomId} action={unassignTeacherFromClassroom}>
+                        <input type="hidden" name="teacherId" value={t.id} />
+                        <input type="hidden" name="classroomId" value={a.classroomId} />
+                        <button
+                          type="submit"
+                          className="text-[11px] bg-stone-100 hover:bg-clay/10 hover:text-clay text-stone-600 px-2 py-1 rounded-full"
+                          title="Tap to remove"
+                        >
+                          {a.label} ×
+                        </button>
+                      </form>
+                    ))}
+                    {(!assignmentsByTeacher[t.id] || assignmentsByTeacher[t.id].length === 0) && (
+                      <span className="text-xs text-stone-400">No classes assigned yet.</span>
+                    )}
+                  </div>
+                </div>
               ))}
-            </select>
-            <select name="classroomId" required className="rounded-lg border border-stone-300 px-3 py-2 text-sm">
-              <option value="">Select class</option>
-              {classrooms.map((c) => (
-                <option key={c.id} value={c.id}>{c.academic_levels.name} {c.section}</option>
-              ))}
-            </select>
-            <button type="submit" className="text-xs font-medium bg-stone-700 text-white px-3 py-2 rounded-lg">
-              Assign
-            </button>
-          </form>
+              {teachers.length === 0 && (
+                <p className="p-4 text-sm text-stone-400 text-center">No teacher accounts yet.</p>
+              )}
+            </div>
+          </div>
         </details>
 
         {/* Existing users list */}
