@@ -53,7 +53,7 @@ export default function Sidebar() {
       {/* Desktop sidebar */}
       <aside className="hidden sm:flex flex-col w-56 shrink-0 border-r border-stone-200 min-h-screen p-4">
         <div className="mb-8 px-2">
-          <p className="font-display text-lg font-semibold text-pine leading-tight">Barima Dua</p>
+          <p className="font-display text-lg font-semibold text-pine leading-tight">Barima Duah</p>
           <p className="text-[11px] text-stone-400 mt-0.5">Creche — JHS 3</p>
         </div>
         <nav className="space-y-1 flex-1">
@@ -76,7 +76,7 @@ export default function Sidebar() {
 
       {/* Mobile top bar */}
       <div className="sm:hidden sticky top-0 z-20 bg-paper border-b border-stone-200 px-4 py-3 flex items-center justify-between">
-        <p className="font-display text-base font-semibold text-pine leading-tight">Barima Dua</p>
+        <p className="font-display text-base font-semibold text-pine leading-tight">Barima Duah</p>
         <button onClick={signOut} className="text-xs text-stone-400">
           Sign out
         </button>

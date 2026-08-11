@@ -354,7 +354,7 @@ export default async function ReportCardPage({ searchParams }) {
             {/* Header */}
             <div className="text-center border-b border-stone-200 pb-4 mb-4">
               <img src="/logo.png" alt="" className="h-14 w-14 mx-auto mb-2 object-contain" />
-              <p className="font-display text-xl font-semibold text-pine">Barima Dua Memorial School</p>
+              <p className="font-display text-xl font-semibold text-pine">Barima Duah Memorial School</p>
               <p className="text-xs text-stone-400">Creche — JHS 3</p>
               <p className="text-sm font-medium text-ink mt-2">Terminal Report Card</p>
             </div>
