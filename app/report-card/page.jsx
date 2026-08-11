@@ -6,20 +6,33 @@ import { saveTermInfo, saveRemarks } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-function gradeFor(score, total) {
+function remarkFor(score, total) {
   const pct = (score / total) * 100;
-  if (pct >= 80) return "A";
-  if (pct >= 70) return "B";
-  if (pct >= 60) return "C";
-  if (pct >= 50) return "D";
-  if (pct >= 40) return "E";
-  return "F";
+  if (pct >= 90) return "EXCELLENT";
+  if (pct >= 80) return "VERY GOOD";
+  if (pct >= 60) return "GOOD";
+  if (pct >= 50) return "AVERAGE";
+  if (pct >= 40) return "BELOW AVERAGE";
+  return "WEAK";
 }
 
 function ordinal(n) {
   const s = ["th", "st", "nd", "rd"];
   const v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+function formatFullDate(date) {
+  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const day = date.getDate();
+  return `${days[date.getDay()]} ${ordinal(day)} ${months[date.getMonth()]}, ${date.getFullYear()}`;
+}
+
+function academicYear(date) {
+  // Ghanaian academic year runs roughly September to August
+  const y = date.getFullYear();
+  return date.getMonth() >= 8 ? `${y}/${String(y + 1).slice(2)}` : `${y - 1}/${String(y).slice(2)}`;
 }
 
 function rankMap(entries) {
@@ -41,6 +54,7 @@ function subjectTotal(t) {
 }
 
 export default async function ReportCardPage({ searchParams }) {
+  const now = new Date();
   const supabase = createClient();
   const selectedClassroomId = searchParams?.classroomId;
   const selectedTerm = searchParams?.term || "Term 1";
@@ -181,7 +195,7 @@ export default async function ReportCardPage({ searchParams }) {
         ca: (t?.["Class Exercise/Assignment"]?.score || 0) + (t?.["Mid-term"]?.score || 0),
         exam: t?.["End-of-term"]?.score ?? null,
         total,
-        grade: total > 0 ? gradeFor(total, 100) : "—",
+        grade: total > 0 ? remarkFor(total, 100) : "—",
         position: map.get(selectedStudentId) ? ordinal(map.get(selectedStudentId)) : "—",
         outOf,
       };
@@ -226,6 +240,12 @@ export default async function ReportCardPage({ searchParams }) {
       .eq("term", selectedTerm)
       .maybeSingle();
 
+    const { data: nextLevel } = await supabase
+      .from("academic_levels")
+      .select("name")
+      .eq("sort_order", activeClassroom.academic_levels.sort_order + 1)
+      .maybeSingle();
+
     detail = {
       studentInfo,
       classSize,
@@ -237,6 +257,7 @@ export default async function ReportCardPage({ searchParams }) {
       balance,
       remarks,
       nextTermBill: remarks?.next_term_bill ?? "",
+      promotedTo: nextLevel?.name || "—",
     };
   }
 
@@ -352,132 +373,153 @@ export default async function ReportCardPage({ searchParams }) {
             </Link>
 
             {/* Header */}
-            <div className="text-center border-b border-stone-200 pb-4 mb-4">
-              <img src="/logo.png" alt="" className="h-14 w-14 mx-auto mb-2 object-contain" />
-              <p className="font-display text-xl font-semibold text-pine">Barima Duah Memorial School</p>
-              <p className="text-xs text-stone-400">Creche — JHS 3</p>
-              <p className="text-sm font-medium text-ink mt-2">Terminal Report Card</p>
+            <div className="text-center border-b-2 border-pine pb-3 mb-4">
+              <img src="/logo.png" alt="" className="h-16 w-16 mx-auto mb-1 object-contain" />
+              <p className="font-display text-lg font-bold text-pine leading-tight">BARIMA DUAH MEMORIAL SCHOOL</p>
+              <p className="text-[11px] text-stone-500">(Founded and Supported by ABAK FOUNDATION GHANA - NGO)</p>
+              <p className="text-[11px] text-stone-500">Location: Kumasi Sokoban Timpomu — Contact: 0246-731605</p>
+              <p className="text-sm font-semibold text-ink mt-2 uppercase tracking-wide">Pupil's Report Card</p>
             </div>
 
-            {/* Student info */}
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm mb-4">
-              <p><span className="text-stone-400">Name:</span> <span className="font-medium text-ink">{detail.studentInfo?.full_name}</span></p>
-              <p><span className="text-stone-400">Class:</span> <span className="font-medium text-ink">{activeClassroom.academic_levels.name} {activeClassroom.section}</span></p>
-              <p><span className="text-stone-400">Term:</span> <span className="font-medium text-ink">{selectedTerm}</span></p>
-              <p><span className="text-stone-400">Date issued:</span> <span className="font-medium text-ink">{new Date().toLocaleDateString()}</span></p>
-              <p><span className="text-stone-400">Vacation date:</span> <span className="font-medium text-ink">{termInfo?.end_date || "—"}</span></p>
-              <p><span className="text-stone-400">Reopening date:</span> <span className="font-medium text-ink">{termInfo?.reopening_date || "—"}</span></p>
+            {/* Student info block */}
+            <div className="text-sm space-y-1 mb-4 border border-stone-200 rounded-lg p-3">
+              <p>
+                <span className="text-stone-500">Name: </span>
+                <span className="font-semibold text-ink uppercase">{detail.studentInfo?.full_name}</span>
+                <span className="text-stone-500 ml-4">Class: </span>
+                <span className="font-medium text-ink">{activeClassroom.academic_levels.name} {activeClassroom.section}</span>
+                <span className="text-stone-500 ml-4">Total score: </span>
+                <span className="font-medium text-ink">{detail.overallTotal}</span>
+              </p>
+              <p>
+                <span className="text-stone-500">Term: </span>
+                <span className="font-medium text-ink">{selectedTerm} — {academicYear(now)} Academic Year</span>
+                <span className="text-stone-500 ml-4">No. on roll: </span>
+                <span className="font-medium text-ink">{detail.classSize}</span>
+                <span className="text-stone-500 ml-4">Position in class: </span>
+                <span className="font-medium text-ink">{detail.overallPosition}</span>
+              </p>
+              <p>
+                <span className="text-stone-500">Date: </span>
+                <span className="font-medium text-ink">{formatFullDate(now)}</span>
+                <span className="text-stone-500 ml-4">Next term begins: </span>
+                <span className="font-medium text-ink">{termInfo?.reopening_date || "—"}</span>
+              </p>
+              <p>
+                <span className="text-stone-500">Attendance: </span>
+                <span className="font-medium text-ink">{detail.presentDays}</span>
+                <span className="text-stone-500 ml-4">Out of total of: </span>
+                <span className="font-medium text-ink">{detail.totalDays}</span>
+                <span className="text-stone-500 ml-4">Promoted to: </span>
+                <span className="font-medium text-ink">{detail.promotedTo}</span>
+              </p>
+              <p>
+                <span className="text-stone-500">Attitude: </span>
+                <span className="font-medium text-ink">{detail.remarks?.attitude || "—"}</span>
+                <span className="text-stone-500 ml-4">Interest / hobby: </span>
+                <span className="font-medium text-ink">{detail.remarks?.interests || "—"}</span>
+              </p>
+              <p>
+                <span className="text-stone-500">Teacher's remark: </span>
+                <span className="font-medium text-ink">{detail.remarks?.teacher_remarks || "—"}</span>
+              </p>
+              <p>
+                <span className="text-stone-500">Head teacher's remark: </span>
+                <span className="font-medium text-ink">{detail.remarks?.headteacher_remarks || "—"}</span>
+              </p>
             </div>
 
             {/* Subjects table */}
-            <table className="w-full text-sm mb-4 border border-stone-200">
-              <thead className="bg-stone-50 text-stone-500 text-xs uppercase">
+            <table className="w-full text-xs mb-4 border border-stone-300">
+              <thead className="bg-pine/10 text-ink uppercase">
                 <tr>
-                  <th className="text-left px-2 py-1.5 border-b border-stone-200">#</th>
-                  <th className="text-left px-2 py-1.5 border-b border-stone-200">Subject</th>
-                  <th className="text-center px-2 py-1.5 border-b border-stone-200">CA(30)</th>
-                  <th className="text-center px-2 py-1.5 border-b border-stone-200">Exam(70)</th>
-                  <th className="text-center px-2 py-1.5 border-b border-stone-200">Total</th>
-                  <th className="text-center px-2 py-1.5 border-b border-stone-200">Grade</th>
-                  <th className="text-center px-2 py-1.5 border-b border-stone-200">Position</th>
+                  <th className="text-left px-2 py-1.5 border border-stone-300">Subject</th>
+                  <th className="text-center px-2 py-1.5 border border-stone-300">30% Score</th>
+                  <th className="text-center px-2 py-1.5 border border-stone-300">70% Score</th>
+                  <th className="text-center px-2 py-1.5 border border-stone-300">Total (100%)</th>
+                  <th className="text-center px-2 py-1.5 border border-stone-300">Position</th>
+                  <th className="text-center px-2 py-1.5 border border-stone-300">Remarks</th>
                 </tr>
               </thead>
               <tbody>
-                {detail.subjectRows.map((r, i) => (
-                  <tr key={r.subject} className="border-b border-stone-100">
-                    <td className="px-2 py-1.5 text-stone-400">{i + 1}</td>
-                    <td className="px-2 py-1.5 text-ink">{r.subject}</td>
-                    <td className="px-2 py-1.5 text-center text-stone-500">{r.ca || "—"}</td>
-                    <td className="px-2 py-1.5 text-center text-stone-500">{r.exam ?? "—"}</td>
-                    <td className="px-2 py-1.5 text-center font-medium text-ink">{r.total || "—"}</td>
-                    <td className="px-2 py-1.5 text-center font-mono font-bold text-pine">{r.grade}</td>
-                    <td className="px-2 py-1.5 text-center text-stone-500">{r.position} of {r.outOf}</td>
+                {detail.subjectRows.map((r) => (
+                  <tr key={r.subject}>
+                    <td className="px-2 py-1.5 border border-stone-200 text-ink">{r.subject}</td>
+                    <td className="px-2 py-1.5 border border-stone-200 text-center text-stone-600">{r.ca || "—"}</td>
+                    <td className="px-2 py-1.5 border border-stone-200 text-center text-stone-600">{r.exam ?? "—"}</td>
+                    <td className="px-2 py-1.5 border border-stone-200 text-center font-medium text-ink">{r.total || "—"}</td>
+                    <td className="px-2 py-1.5 border border-stone-200 text-center text-stone-600">{r.position}</td>
+                    <td className="px-2 py-1.5 border border-stone-200 text-center font-semibold text-pine">{r.grade}</td>
                   </tr>
                 ))}
-                <tr className="bg-stone-50 font-medium">
-                  <td colSpan={4} className="px-2 py-2 text-right text-ink">TOTAL</td>
-                  <td className="px-2 py-2 text-center text-ink">{detail.overallTotal}</td>
-                  <td></td>
-                  <td className="px-2 py-2 text-center text-slateblue">{detail.overallPosition} of {detail.classSize}</td>
-                </tr>
               </tbody>
             </table>
 
-            {/* Attendance */}
-            <div className="grid grid-cols-3 gap-3 text-sm mb-4">
-              <div className="bg-stone-50 rounded-lg p-2 text-center">
-                <p className="text-[10px] text-stone-400">Times present</p>
-                <p className="font-medium text-ink">{detail.presentDays}</p>
-              </div>
-              <div className="bg-stone-50 rounded-lg p-2 text-center">
-                <p className="text-[10px] text-stone-400">Total attendance</p>
-                <p className="font-medium text-ink">{detail.totalDays}</p>
-              </div>
-              <div className="bg-stone-50 rounded-lg p-2 text-center">
-                <p className="text-[10px] text-stone-400">Attendance %</p>
-                <p className="font-medium text-ink">
-                  {detail.totalDays > 0 ? Math.round((detail.presentDays / detail.totalDays) * 100) : "—"}
-                  {detail.totalDays > 0 ? "%" : ""}
-                </p>
-              </div>
+            {/* Bills */}
+            <div className="border border-stone-300 rounded-lg overflow-hidden mb-4">
+              <p className="bg-pine/10 text-xs font-semibold text-ink uppercase px-3 py-1.5">
+                {selectedTerm === "Term 3" ? "1st" : selectedTerm === "Term 1" ? "2nd" : "3rd"} Term {academicYear(now)} Academic Year — Bills
+              </p>
+              <form action={saveRemarks} className="p-3 space-y-2">
+                <input type="hidden" name="studentId" value={selectedStudentId} />
+                <input type="hidden" name="term" value={selectedTerm} />
+                <input type="hidden" name="attitude" value={detail.remarks?.attitude || ""} />
+                <input type="hidden" name="interests" value={detail.remarks?.interests || ""} />
+                <input type="hidden" name="teacherRemarks" value={detail.remarks?.teacher_remarks || ""} />
+                <input type="hidden" name="headteacherRemarks" value={detail.remarks?.headteacher_remarks || ""} />
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-stone-500">New bill for next term:</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-ink font-medium">Gh₵</span>
+                    <input
+                      type="number"
+                      name="nextTermBill"
+                      step="0.01"
+                      defaultValue={detail.nextTermBill}
+                      placeholder="0.00"
+                      className="w-24 rounded-lg border border-stone-300 px-2 py-1 text-sm text-right"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-stone-500">Old arrears / debt (as at this vacation day):</span>
+                  <span className="font-medium text-clay">Gh₵ {detail.balance}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm pt-2 border-t border-stone-200">
+                  <span className="font-semibold text-ink">Total termly bill to pay:</span>
+                  <span className="font-display font-semibold text-ink">
+                    Gh₵ {(detail.balance + Number(detail.nextTermBill || 0)).toFixed(2)}
+                  </span>
+                </div>
+                <button type="submit" className="text-xs font-medium bg-pine text-paper px-3 py-1.5 rounded-lg hover:bg-pine/90 mt-1">
+                  Save
+                </button>
+              </form>
             </div>
 
-            {/* Remarks form */}
-            <form action={saveRemarks} className="space-y-3 mb-4">
-              <input type="hidden" name="studentId" value={selectedStudentId} />
-              <input type="hidden" name="term" value={selectedTerm} />
-              <div>
-                <label className="text-xs font-medium text-stone-500">Attitude / conduct</label>
-                <input name="attitude" defaultValue={detail.remarks?.attitude || ""} className="w-full mt-1 rounded-lg border border-stone-300 px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-stone-500">Interests</label>
-                <input name="interests" defaultValue={detail.remarks?.interests || ""} className="w-full mt-1 rounded-lg border border-stone-300 px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-stone-500">Class teacher's remarks</label>
-                <textarea name="teacherRemarks" defaultValue={detail.remarks?.teacher_remarks || ""} rows={2} className="w-full mt-1 rounded-lg border border-stone-300 px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-stone-500">Headteacher's remarks</label>
-                <textarea name="headteacherRemarks" defaultValue={detail.remarks?.headteacher_remarks || ""} rows={2} className="w-full mt-1 rounded-lg border border-stone-300 px-3 py-2 text-sm" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-stone-200">
-                <div>
-                  <label className="text-xs font-medium text-stone-500">Debt as at vacation date</label>
-                  <p className="mt-1 text-sm font-medium text-clay">GHS {detail.balance}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-stone-500">New bill for next term</label>
-                  <input
-                    type="number"
-                    name="nextTermBill"
-                    step="0.01"
-                    defaultValue={detail.nextTermBill}
-                    placeholder="0.00"
-                    className="w-full mt-1 rounded-lg border border-stone-300 px-3 py-2 text-sm"
-                  />
-                </div>
-                <div className="col-span-2 bg-stone-50 rounded-lg p-3">
-                  <p className="text-xs text-stone-400">Total termly bill to pay</p>
-                  <p className="text-lg font-display font-semibold text-ink">
-                    GHS {(detail.balance + Number(detail.nextTermBill || 0)).toFixed(2)}
-                  </p>
-                </div>
-              </div>
-
-              <button type="submit" className="bg-pine text-paper text-sm font-medium px-4 py-2 rounded-lg hover:bg-pine/90">
-                Save remarks & billing
-              </button>
-            </form>
+            {/* Editable remarks (admin/teacher only, kept separate from the printed-style card above) */}
+            <details className="mb-4">
+              <summary className="text-xs text-stone-400 cursor-pointer">Edit attitude / interests / remarks</summary>
+              <form action={saveRemarks} className="space-y-2 mt-2">
+                <input type="hidden" name="studentId" value={selectedStudentId} />
+                <input type="hidden" name="term" value={selectedTerm} />
+                <input type="hidden" name="nextTermBill" value={detail.nextTermBill} />
+                <input name="attitude" defaultValue={detail.remarks?.attitude || ""} placeholder="Attitude / conduct" className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm" />
+                <input name="interests" defaultValue={detail.remarks?.interests || ""} placeholder="Interest / hobby" className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm" />
+                <input name="teacherRemarks" defaultValue={detail.remarks?.teacher_remarks || ""} placeholder="Class teacher's remark" className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm" />
+                <input name="headteacherRemarks" defaultValue={detail.remarks?.headteacher_remarks || ""} placeholder="Head teacher's remark" className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm" />
+                <button type="submit" className="text-xs font-medium bg-stone-700 text-white px-3 py-2 rounded-lg">
+                  Save
+                </button>
+              </form>
+            </details>
 
             {/* Signature */}
-            <div className="pt-6 mt-4 border-t border-stone-200 flex justify-end">
-              <div className="text-center">
-                <div className="border-b border-stone-400 w-48 h-8"></div>
-                <p className="text-xs text-stone-400 mt-1">Director's Signature</p>
-              </div>
+            <div className="pt-4 mt-2 border-t border-stone-200">
+              <p className="text-sm text-ink mb-6">Director's Signature: ___________________________________</p>
+              <p className="text-[11px] font-semibold text-clay text-center uppercase">
+                Amount paid are not refundable under any condition
+              </p>
             </div>
           </div>
         )}
