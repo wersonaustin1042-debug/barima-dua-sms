@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import Sidebar from "@/components/Sidebar";
 import AutoSubmitSelect from "@/components/AutoSubmitSelect";
 import { saveTermInfo, saveRemarks } from "./actions";
+import PrintButton from "./PrintButton";
 
 export const dynamic = "force-dynamic";
 
@@ -270,11 +271,11 @@ export default async function ReportCardPage({ searchParams }) {
   return (
     <div className="flex">
       <Sidebar />
-      <main className="flex-1 p-5 sm:p-8 max-w-3xl">
-        <h1 className="font-display text-2xl font-semibold text-ink mb-1">Report cards</h1>
-        <p className="text-stone-500 text-sm mb-6">Pick a class to see the class list, then open a student's full report card.</p>
+      <main className="flex-1 p-5 sm:p-8 max-w-3xl print:p-0 print:max-w-full">
+        <h1 className="font-display text-2xl font-semibold text-ink mb-1 print:hidden">Report cards</h1>
+        <p className="text-stone-500 text-sm mb-6 print:hidden">Pick a class to see the class list, then open a student's full report card.</p>
 
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-4 print:hidden">
           {classrooms.map((c) => (
             <Link
               key={c.id}
@@ -291,7 +292,7 @@ export default async function ReportCardPage({ searchParams }) {
         </div>
 
         {selectedClassroomId && (
-          <form method="GET" className="mb-4">
+          <form method="GET" className="mb-4 print:hidden">
             <input type="hidden" name="classroomId" value={selectedClassroomId} />
             <AutoSubmitSelect
               name="term"
@@ -303,7 +304,7 @@ export default async function ReportCardPage({ searchParams }) {
         )}
 
         {myProfile?.role && ["admin", "director", "headmaster", "assistant_headmaster"].includes(myProfile.role) && (
-          <details className="mb-6">
+          <details className="mb-6 print:hidden">
             <summary className="text-xs text-stone-400 cursor-pointer">Set {selectedTerm} dates (vacation / reopening)</summary>
             <form action={saveTermInfo} className="flex flex-wrap gap-2 mt-2 items-end">
               <input type="hidden" name="term" value={selectedTerm} />
@@ -364,13 +365,16 @@ export default async function ReportCardPage({ searchParams }) {
         )}
 
         {detail && (
-          <div className="bg-white rounded-xl border border-stone-200 p-5 print:shadow-none">
-            <Link
-              href={`/report-card?classroomId=${selectedClassroomId}&term=${selectedTerm}`}
-              className="text-xs text-stone-400 hover:text-pine mb-4 inline-block"
-            >
-              ← Back to class list
-            </Link>
+          <div className="bg-white rounded-xl border border-stone-200 p-5 print:shadow-none print:border-0 print:p-0">
+            <div className="flex items-center justify-between mb-4 print:hidden">
+              <Link
+                href={`/report-card?classroomId=${selectedClassroomId}&term=${selectedTerm}`}
+                className="text-xs text-stone-400 hover:text-pine inline-block"
+              >
+                ← Back to class list
+              </Link>
+              <PrintButton />
+            </div>
 
             {/* Header */}
             <div className="text-center pb-2 mb-3">
@@ -470,7 +474,7 @@ export default async function ReportCardPage({ searchParams }) {
               <input type="hidden" name="interests" value={detail.remarks?.interests || ""} />
               <input type="hidden" name="teacherRemarks" value={detail.remarks?.teacher_remarks || ""} />
               <input type="hidden" name="headteacherRemarks" value={detail.remarks?.headteacher_remarks || ""} />
-              <p className="flex items-center gap-2">
+              <p className="flex items-center gap-2 print:hidden">
                 <span className="text-stone-500">NEW BILL FOR NEXT TERM:</span>
                 <span className="text-ink font-medium">Gh₵</span>
                 <input
@@ -482,6 +486,10 @@ export default async function ReportCardPage({ searchParams }) {
                   className="w-24 rounded border border-stone-300 px-2 py-0.5 text-sm"
                 />
               </p>
+              <p className="hidden print:block">
+                <span className="text-stone-500">NEW BILL FOR NEXT TERM: </span>
+                <span className="text-ink font-medium">Gh₵ {Number(detail.nextTermBill || 0).toFixed(2)}</span>
+              </p>
               <p>
                 <span className="text-stone-500">OLD ARREARS/DEBT (As at this vacation day): </span>
                 <span className="font-medium text-clay">Gh₵ {detail.balance}</span>
@@ -490,13 +498,13 @@ export default async function ReportCardPage({ searchParams }) {
                 <span className="text-ink">Total Termly Bill to Pay: </span>
                 <span className="text-ink">Gh₵ {(detail.balance + Number(detail.nextTermBill || 0)).toFixed(2)}</span>
               </p>
-              <button type="submit" className="text-xs font-medium bg-pine text-paper px-3 py-1.5 rounded-lg hover:bg-pine/90 mt-1">
+              <button type="submit" className="text-xs font-medium bg-pine text-paper px-3 py-1.5 rounded-lg hover:bg-pine/90 mt-1 print:hidden">
                 Save
               </button>
             </form>
 
             {/* Editable remarks (kept separate from the printed-style card above) */}
-            <details className="mb-4">
+            <details className="mb-4 print:hidden">
               <summary className="text-xs text-stone-400 cursor-pointer">Edit attitude / interests / remarks</summary>
               <form action={saveRemarks} className="space-y-2 mt-2">
                 <input type="hidden" name="studentId" value={selectedStudentId} />
