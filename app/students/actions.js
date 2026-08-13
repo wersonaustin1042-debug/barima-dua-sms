@@ -9,7 +9,7 @@ export async function enrollStudent(formData) {
   const fullName = formData.get("fullName");
   const levelId = formData.get("levelId");
   const section = formData.get("section");
-  const dob = formData.get("dob") || null;
+  const dob = formData.get("dob") || null;const guardianName = formData.get("guardianName") || null; const guardianPhone = formData.get("guardianPhone") || null; const guardianRelationship = formData.get("guardianRelationship") || null;
 
   // Find or create the classroom for this level + section
   let { data: classroom } = await supabase
@@ -29,13 +29,7 @@ export async function enrollStudent(formData) {
     classroom = newClassroom;
   }
 
-  const { data: student, error } = await supabase
-    .from("students")
-    .insert({
-      full_name: fullName,
-      classroom_id: classroom.id,
-      date_of_birth: dob,
-    })
+  const { data: student, error } = await supabase .from("students") .insert({ full_name: fullName, classroom_id: classroom.id, date_of_birth: dob, guardian_name: guardianName, guardian_phone: guardianPhone, guardian_relationship: guardianRelationship, })
     .select("id")
     .single();
 
