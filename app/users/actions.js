@@ -95,3 +95,4 @@ export async function unassignTeacherFromClassroom(formData) {
     .eq("classroom_id", classroomId);
   revalidatePath("/users");
 }
+export async function setClassTeacher(formData) { const supabase = createClient(); const classroomId = formData.get("classroomId"); const teacherId = formData.get("teacherId") || null; if (!classroomId) return; await supabase.from("classrooms").update({ class_teacher_id: teacherId }).eq("id", classroomId); revalidatePath("/users"); }
