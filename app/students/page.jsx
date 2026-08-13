@@ -59,6 +59,33 @@ export default async function StudentsPage() {
                 className="w-full mt-1 rounded-lg border border-stone-300 px-3 py-2 text-sm"
               />
             </div>
+            <div className="col-span-2">
+              <label className="text-xs font-medium text-stone-500">Guardian full name</label>
+              <input
+                name="guardianName"
+                className="w-full mt-1 rounded-lg border border-stone-300 px-3 py-2 text-sm"
+                placeholder="e.g. Kofi Adjei"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-stone-500">Guardian phone</label>
+              <input
+                name="guardianPhone"
+                type="tel"
+                className="w-full mt-1 rounded-lg border border-stone-300 px-3 py-2 text-sm"
+                placeholder="e.g. 0244000000"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-stone-500">Relationship</label>
+              <select name="guardianRelationship" className="w-full mt-1 rounded-lg border border-stone-300 px-3 py-2 text-sm">
+                <option value="">Select</option>
+                <option value="Mother">Mother</option>
+                <option value="Father">Father</option>
+                <option value="Guardian">Guardian</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
           </div>
           <button
             type="submit"
@@ -101,3 +128,4 @@ export default async function StudentsPage() {
     </div>
   );
 }
+
