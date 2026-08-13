@@ -88,14 +88,24 @@ export default async function FeesPage({ searchParams }) {
   const selectedYear = Number(searchParams?.year) || now.getFullYear();
   const selectedMonth = Number(searchParams?.month) || now.getMonth() + 1;
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: myProfile } = await supabase.from("profiles").select("role").eq("id", user?.id).single();
+
   const { data: classroomsRaw } = await supabase
     .from("classrooms")
-    .select("id, section, academic_levels(name, sort_order)");
-  const classrooms = (classroomsRaw || []).sort(
+    .select("id, section, class_teacher_id, academic_levels(name, sort_order)");
+  let classrooms = (classroomsRaw || []).sort(
     (a, b) =>
       a.academic_levels.sort_order - b.academic_levels.sort_order ||
       a.section.localeCompare(b.section)
   );
+
+  // Teachers only manage fees for their own homeroom class, not every class they teach.
+  if (myProfile?.role === "teacher") {
+    classrooms = classrooms.filter((c) => c.class_teacher_id === user.id);
+  }
 
   let classStudents = [];
   let statusByStudent = {};
@@ -203,6 +213,9 @@ export default async function FeesPage({ searchParams }) {
               {c.academic_levels.name} {c.section}
             </Link>
           ))}
+          {myProfile?.role === "teacher" && classrooms.length === 0 && (
+            <p className="text-xs text-stone-400">You aren't set as the homeroom teacher for any class yet.</p>
+          )}
         </div>
 
         {selectedClassroomId && (
