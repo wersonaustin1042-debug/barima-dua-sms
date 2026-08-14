@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import Sidebar from "@/components/Sidebar";
-import { enrollStudent, updateRemarks } from "./actions";
+import { enrollStudent, updateRemarks, uploadPhoto } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +15,7 @@ export default async function StudentsPage({ searchParams }) {
 
   let studentsQuery = supabase
     .from("students")
-    .select("id, full_name, admission_date, remarks, classrooms(section, academic_levels(name, sort_order))")
+    .select("id, full_name, admission_date, remarks, photo_url, classrooms(section, academic_levels(name, sort_order))")
     .eq("status", "active")
     .order("created_at", { ascending: false });
 
@@ -32,7 +32,11 @@ export default async function StudentsPage({ searchParams }) {
         <h1 className="font-display text-2xl font-semibold text-ink mb-1">Enrollment</h1>
         <p className="text-stone-500 text-sm mb-6">Register a new student and assign them to a class.</p>
 
-        <form action={enrollStudent} className="bg-white rounded-xl border border-stone-200 p-4 space-y-4 mb-6">
+        <form
+          action={enrollStudent}
+          encType="multipart/form-data"
+          className="bg-white rounded-xl border border-stone-200 p-4 space-y-4 mb-6"
+        >
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
               <label className="text-xs font-medium text-stone-500">Student full name</label>
@@ -94,6 +98,15 @@ export default async function StudentsPage({ searchParams }) {
               </select>
             </div>
             <div className="col-span-2">
+              <label className="text-xs font-medium text-stone-500">Passport photo (optional)</label>
+              <input
+                name="photo"
+                type="file"
+                accept="image/*"
+                className="w-full mt-1 text-sm text-stone-500"
+              />
+            </div>
+            <div className="col-span-2">
               <label className="text-xs font-medium text-stone-500">Remarks (optional)</label>
               <textarea
                 name="remarks"
@@ -139,6 +152,7 @@ export default async function StudentsPage({ searchParams }) {
           <table className="w-full text-sm">
             <thead className="bg-stone-50 text-stone-500 text-xs uppercase">
               <tr>
+                <th className="text-left px-4 py-2 font-medium">Photo</th>
                 <th className="text-left px-4 py-2 font-medium">Name</th>
                 <th className="text-left px-4 py-2 font-medium">Class</th>
                 <th className="text-left px-4 py-2 font-medium">Admitted</th>
@@ -148,6 +162,29 @@ export default async function StudentsPage({ searchParams }) {
             <tbody>
               {(students || []).map((s) => (
                 <tr key={s.id} className="border-t border-stone-100">
+                  <td className="px-4 py-2 align-top">
+                    {s.photo_url ? (
+                      <img
+                        src={s.photo_url}
+                        alt=""
+                        className="w-10 h-12 object-cover rounded border border-stone-200 mb-1"
+                      />
+                    ) : (
+                      <div className="w-10 h-12 rounded border border-dashed border-stone-200 mb-1 flex items-center justify-center text-[9px] text-stone-300">
+                        None
+                      </div>
+                    )}
+                    <form action={uploadPhoto} encType="multipart/form-data" className="flex flex-col gap-1">
+                      <input type="hidden" name="studentId" value={s.id} />
+                      <input type="file" name="photo" accept="image/*" className="text-[10px] w-24" />
+                      <button
+                        type="submit"
+                        className="text-[10px] font-medium bg-stone-100 text-ink px-1.5 py-0.5 rounded border border-stone-200 hover:bg-stone-200 w-fit"
+                      >
+                        Save
+                      </button>
+                    </form>
+                  </td>
                   <td className="px-4 py-2 text-ink align-top">{s.full_name}</td>
                   <td className="px-4 py-2 text-stone-500 align-top">
                     {s.classrooms?.academic_levels?.name} {s.classrooms?.section}
@@ -175,7 +212,7 @@ export default async function StudentsPage({ searchParams }) {
               ))}
               {(!students || students.length === 0) && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-stone-400">
+                  <td colSpan={5} className="px-4 py-6 text-center text-stone-400">
                     {q ? `No students matching "${q}".` : "No students enrolled yet."}
                   </td>
                 </tr>
