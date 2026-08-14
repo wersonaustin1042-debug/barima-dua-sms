@@ -12,6 +12,7 @@ const ALL_NAV = [
   { href: "/report-card", label: "Report card", roles: [...ADMIN_LIKE, "teacher"] },
   { href: "/fees", label: "Fees", roles: [...ADMIN_LIKE, "accountant", "teacher"] },
   { href: "/fees-overview", label: "Fees overview", roles: ["admin", "director"] },
+  { href: "/revenue-reports", label: "Revenue reports", roles: ["admin", "director", "accountant"] },
   { href: "/users", label: "Staff & parents", roles: ADMIN_LIKE },
   { href: "/parent", label: "My children", roles: ["parent"] },
 ];
@@ -134,4 +135,3 @@ export default function Sidebar() {
     </>
   );
 }
-
