@@ -146,7 +146,7 @@ export default async function ReportCardPage({ searchParams }) {
   if (selectedStudentId && activeClassroom) {
     const { data: studentInfo } = await supabase
       .from("students")
-      .select("id, full_name")
+      .select("id, full_name, photo_url")
       .eq("id", selectedStudentId)
       .single();
 
@@ -377,7 +377,14 @@ export default async function ReportCardPage({ searchParams }) {
             </div>
 
             {/* Header */}
-            <div className="text-center pb-2 mb-3">
+            <div className="relative text-center pb-2 mb-3">
+              {detail.studentInfo?.photo_url && (
+                <img
+                  src={detail.studentInfo.photo_url}
+                  alt=""
+                  className="absolute top-0 right-0 w-16 h-20 object-cover rounded border border-stone-300"
+                />
+              )}
               <img src="/logo.png" alt="" className="h-16 w-16 mx-auto mb-1 object-contain" />
               <p className="font-display text-base font-bold text-ink leading-tight">BARIMA DUAH MEMORIAL SCHOOL</p>
               <p className="text-[10px] text-stone-500 leading-tight">(Founded and Supported by ABAK FOUNDATION GHANA - NGO)</p>
