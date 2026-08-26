@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import Sidebar from "@/components/Sidebar";
 import AutoSubmitSelect from "@/components/AutoSubmitSelect";
-import { ensureFeeSetup, changeFrequency, saveRecurringMonth, saveTuitionMonth } from "./actions";
+import { ensureFeeSetup, changeFrequency, saveRecurringMonth, saveTuitionMonth, updateFeeAmount } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -326,8 +326,23 @@ export default async function FeesPage({ searchParams }) {
               return (
                 <div key={fee.id} className="space-y-2">
                   <div className="flex items-center gap-2 px-1">
-                    <p className="text-xs text-stone-500 capitalize font-medium">{fee.fee_type}</p>
-                    <span className="text-xs text-stone-400">GHS {fee.amount} typical ·</span>
+                    <p className="text-xs text-stone-500 font-medium">Canteen & transport</p>
+                    <form action={updateFeeAmount} className="flex items-center gap-1">
+                      <input type="hidden" name="feeId" value={fee.id} />
+                      <span className="text-xs text-stone-400">GHS</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        name="amount"
+                        defaultValue={fee.amount}
+                        className="w-16 rounded-lg border border-stone-300 px-1.5 py-1 text-xs text-center"
+                      />
+                      <button type="submit" className="text-xs font-medium bg-pine text-paper px-2 py-1 rounded-lg hover:bg-pine/90">
+                        Save
+                      </button>
+                    </form>
+                    <span className="text-xs text-stone-400">·</span>
                     <form action={changeFrequency}>
                       <input type="hidden" name="feeId" value={fee.id} />
                       <AutoSubmitSelect
@@ -343,7 +358,7 @@ export default async function FeesPage({ searchParams }) {
                     </form>
                   </div>
                   <CalendarGrid
-                    title={`${fee.fee_type[0].toUpperCase() + fee.fee_type.slice(1)} — ${MONTH_NAMES[selectedMonth - 1]} ${selectedYear}`}
+                    title={`Canteen & transport — ${MONTH_NAMES[selectedMonth - 1]} ${selectedYear}`}
                     subtitle="Enter the exact amount paid for each period."
                     periods={periods}
                     existingByKey={feeExistingByType[fee.id] || {}}
