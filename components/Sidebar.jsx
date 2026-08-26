@@ -7,6 +7,7 @@ const ADMIN_LIKE = ["admin", "director", "headmaster", "assistant_headmaster"];
 const ALL_NAV = [
   { href: "/dashboard", label: "Dashboard", roles: [...ADMIN_LIKE, "accountant"] },
   { href: "/students", label: "Enrollment", roles: ADMIN_LIKE },
+  { href: "/promotion", label: "Promotion", roles: ADMIN_LIKE },
   { href: "/attendance", label: "Attendance", roles: [...ADMIN_LIKE, "teacher"] },
   { href: "/grades", label: "Grades", roles: [...ADMIN_LIKE, "teacher"] },
   { href: "/report-card", label: "Report card", roles: [...ADMIN_LIKE, "teacher"] },
