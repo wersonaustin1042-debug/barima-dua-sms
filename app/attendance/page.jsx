@@ -31,7 +31,7 @@ function weekdaysInMonth(year, month) {
 
 export default async function AttendancePage({ searchParams }) {
   const supabase = createClient();
-  const selectedClassroomId = searchParams?.classroomId;
+  let selectedClassroomId = searchParams?.classroomId;
 
   const now = new Date();
   const selectedYear = Number(searchParams?.year) || now.getFullYear();
@@ -50,7 +50,23 @@ export default async function AttendancePage({ searchParams }) {
       a.academic_levels.sort_order - b.academic_levels.sort_order ||
       a.section.localeCompare(b.section)
   );
-if (myProfile?.role === "teacher") { const { data: assignedRows } = await supabase .from("teacher_classrooms") .select("classroom_id") .eq("teacher_id", user.id); const assignedIds = new Set((assignedRows || []).map((r) => r.classroom_id)); classrooms = classrooms.filter((c) => assignedIds.has(c.id)); }
+
+  // Only the homeroom teacher can mark attendance for a class — being assigned
+  // to teach it is not enough.
+  if (myProfile?.role === "teacher") {
+    classrooms = classrooms.filter((c) => c.class_teacher_id === user.id);
+  }
+
+  // Guard against a teacher reaching a class they don't own by editing the URL
+  // directly (the button list above only filters what's *shown*).
+  if (
+    myProfile?.role === "teacher" &&
+    selectedClassroomId &&
+    !classrooms.some((c) => c.id === selectedClassroomId)
+  ) {
+    selectedClassroomId = undefined;
+  }
+
   const days = weekdaysInMonth(selectedYear, selectedMonth);
 
   let students = [];
@@ -112,6 +128,9 @@ if (myProfile?.role === "teacher") { const { data: assignedRows } = await supaba
               {c.academic_levels.name} {c.section}
             </Link>
           ))}
+          {myProfile?.role === "teacher" && classrooms.length === 0 && (
+            <p className="text-xs text-stone-400">You aren't set as the homeroom teacher for any class yet.</p>
+          )}
         </div>
 
         {selectedClassroomId && (
