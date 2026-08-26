@@ -54,6 +54,13 @@ export default async function UsersPage() {
   const teachers = (profiles || []).filter((p) => p.role === "teacher");
   const parents = (profiles || []).filter((p) => p.role === "parent");
 
+  // Map of teacherId -> classroomId they're already homeroom teacher for,
+  // so a teacher can't be picked as homeroom for a second class
+  const homeroomByTeacher = {};
+  classrooms.forEach((c) => {
+    if (c.class_teacher_id) homeroomByTeacher[c.class_teacher_id] = c.id;
+  });
+
   return (
     <div className="flex">
       <Sidebar />
@@ -91,7 +98,8 @@ export default async function UsersPage() {
           <summary className="text-sm font-medium text-ink cursor-pointer">Homeroom teacher</summary>
           <p className="text-xs text-stone-400 mt-1 mb-3">
             Set which teacher is the homeroom (class) teacher for each classroom. This is separate from the
-            class assignments below — homeroom teachers get access to Fees for their own class.
+            class assignments below — homeroom teachers get access to Fees for their own class. A teacher can
+            only be homeroom teacher for one classroom at a time.
           </p>
           <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
             {classrooms.map((c) => (
@@ -111,9 +119,11 @@ export default async function UsersPage() {
                     className="rounded-lg border border-stone-300 px-2 py-1.5 text-xs"
                   >
                     <option value="">No homeroom teacher</option>
-                    {teachers.map((t) => (
-                      <option key={t.id} value={t.id}>{t.full_name}</option>
-                    ))}
+                    {teachers
+                      .filter((t) => !homeroomByTeacher[t.id] || homeroomByTeacher[t.id] === c.id)
+                      .map((t) => (
+                        <option key={t.id} value={t.id}>{t.full_name}</option>
+                      ))}
                   </select>
                   <button
                     type="submit"
