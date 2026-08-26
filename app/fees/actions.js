@@ -25,10 +25,9 @@ async function studentIdForFee(supabase, feeId) {
   return fee?.student_id;
 }
 
-// Makes sure a student has a tuition plan and canteen/transport fee rows —
-// but only for the services that student is actually signed up for, so a
-// student who doesn't take transport never has a transport row (and never
-// shows transport debt).
+// Makes sure a student has a tuition plan and a combined canteen+transport
+// fee row — but only if that student is actually signed up for it, so a
+// student who opts out never shows a canteen/transport debt.
 export async function ensureFeeSetup(studentId) {
   const supabase = createClient();
   const {
@@ -46,56 +45,49 @@ export async function ensureFeeSetup(studentId) {
 
   const { data: studentFlags } = await supabase
     .from("students")
-    .select("takes_canteen, takes_transport")
+    .select("takes_canteen_transport")
     .eq("id", studentId)
     .single();
-  // Default both on if the columns haven't synced yet for some reason.
-  const takesCanteen = studentFlags?.takes_canteen !== false;
-  const takesTransport = studentFlags?.takes_transport !== false;
+  // Default on if the column hasn't synced yet for some reason.
+  const takesCanteenTransport = studentFlags?.takes_canteen_transport !== false;
 
   const { data: existingFees } = await supabase
     .from("recurring_fees")
     .select("fee_type")
     .eq("student_id", studentId);
   const have = new Set((existingFees || []).map((f) => f.fee_type));
-  const toInsert = [];
-  if (takesCanteen && !have.has("canteen")) {
-    toInsert.push({ student_id: studentId, fee_type: "canteen", frequency: "daily", amount: 5 });
-  }
-  if (takesTransport && !have.has("transport")) {
-    toInsert.push({ student_id: studentId, fee_type: "transport", frequency: "monthly", amount: 60 });
-  }
-  if (toInsert.length > 0) {
-    await supabase.from("recurring_fees").insert(toInsert);
+
+  if (takesCanteenTransport && !have.has("canteen_transport")) {
+    await supabase.from("recurring_fees").insert({
+      student_id: studentId,
+      fee_type: "canteen_transport",
+      frequency: "daily",
+      amount: 10, // GHS 7 canteen + GHS 3 transport combined
+    });
   }
 }
 
-// Toggle whether a student takes canteen and/or transport. Turning a service
-// OFF removes its fee row (and any recorded payments for it) so no balance or
-// debt for that service ever shows for this student again. Turning it back
-// ON just lets ensureFeeSetup recreate a fresh row next time Fees is opened.
+// Toggle whether a student takes canteen & transport. Turning it OFF removes
+// the fee row (and any recorded payments for it) so no balance or debt for
+// it ever shows for this student again. Turning it back ON just lets
+// ensureFeeSetup recreate a fresh row next time Fees is opened.
 export async function setServiceFlags(formData) {
   const supabase = createClient();
   const studentId = formData.get("studentId");
   if (!studentId) return;
-  const takesCanteen = formData.get("takesCanteen") === "on";
-  const takesTransport = formData.get("takesTransport") === "on";
+  const takesCanteenTransport = formData.get("takesCanteenTransport") === "on";
 
   await supabase
     .from("students")
-    .update({ takes_canteen: takesCanteen, takes_transport: takesTransport })
+    .update({ takes_canteen_transport: takesCanteenTransport })
     .eq("id", studentId);
 
-  const typesToRemove = [];
-  if (!takesCanteen) typesToRemove.push("canteen");
-  if (!takesTransport) typesToRemove.push("transport");
-
-  if (typesToRemove.length > 0) {
+  if (!takesCanteenTransport) {
     const { data: feesToRemove } = await supabase
       .from("recurring_fees")
       .select("id")
       .eq("student_id", studentId)
-      .in("fee_type", typesToRemove);
+      .eq("fee_type", "canteen_transport");
     const feeIds = (feesToRemove || []).map((f) => f.id);
     if (feeIds.length > 0) {
       await supabase.from("recurring_fee_payments").delete().in("recurring_fee_id", feeIds);
