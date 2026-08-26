@@ -81,7 +81,7 @@ function CalendarGrid({ periods, existingByKey, formAction, hiddenFields, title,
 
 export default async function FeesPage({ searchParams }) {
   const supabase = createClient();
-  const selectedClassroomId = searchParams?.classroomId;
+  let selectedClassroomId = searchParams?.classroomId;
   const selectedStudentId = searchParams?.studentId;
 
   const now = new Date();
@@ -105,6 +105,16 @@ export default async function FeesPage({ searchParams }) {
   // Teachers only manage fees for their own homeroom class, not every class they teach.
   if (myProfile?.role === "teacher") {
     classrooms = classrooms.filter((c) => c.class_teacher_id === user.id);
+  }
+
+  // Guard against a teacher reaching a class they don't own by editing the URL
+  // directly (the button list above only filters what's *shown*).
+  if (
+    myProfile?.role === "teacher" &&
+    selectedClassroomId &&
+    !classrooms.some((c) => c.id === selectedClassroomId)
+  ) {
+    selectedClassroomId = undefined;
   }
 
   let classStudents = [];
@@ -138,7 +148,9 @@ export default async function FeesPage({ searchParams }) {
   let tuitionExisting = {};
   let feeExistingByType = {};
 
-  if (selectedStudentId) {
+  // A teacher can only open a student who is in a classroom they're allowed to see
+  // (i.e. already filtered above) — classStudents itself is scoped correctly.
+  if (selectedStudentId && classStudents.some((s) => s.id === selectedStudentId)) {
     selectedStudentInfo = classStudents.find((s) => s.id === selectedStudentId);
 
     const { data: planData } = await supabase
