@@ -14,6 +14,25 @@ export async function cycleAttendance(formData) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Only the homeroom teacher of this classroom (or an admin-like role) can
+  // mark attendance here. Being assigned to teach the class isn't enough —
+  // the page.jsx filtering already hides other classes, but this blocks a
+  // teacher from reaching one by editing the request directly. The RLS
+  // policy in schema-homeroom-fees-and-service-optin.sql would also block
+  // the write, but that fails silently from the UI's point of view, so we
+  // check explicitly here and bail out with nothing happening.
+  const { data: myProfile } = await supabase.from("profiles").select("role").eq("id", user?.id).single();
+  if (myProfile?.role === "teacher") {
+    const { data: classroom } = await supabase
+      .from("classrooms")
+      .select("class_teacher_id")
+      .eq("id", classroomId)
+      .single();
+    if (classroom?.class_teacher_id !== user.id) {
+      return; // not this teacher's homeroom — silently ignore, matching setClassTeacher's pattern
+    }
+  }
+
   // blank -> present -> absent -> blank
   let nextStatus = null;
   if (currentStatus === "") nextStatus = "present";
