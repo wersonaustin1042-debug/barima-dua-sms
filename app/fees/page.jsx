@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import Sidebar from "@/components/Sidebar";
 import AutoSubmitSelect from "@/components/AutoSubmitSelect";
-import { ensureFeeSetup, changeFrequency, saveRecurringMonth, saveTuitionMonth, updateFeeAmount } from "./actions";
+import { ensureFeeSetup, changeFrequency, saveRecurringMonth, saveTuitionMonth, updateFeeAmount, setClassFee, applyClassFee } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -119,8 +119,16 @@ export default async function FeesPage({ searchParams }) {
 
   let classStudents = [];
   let statusByStudent = {};
+  let classFeeAmount = 0;
 
   if (selectedClassroomId) {
+    const { data: classFeeData } = await supabase
+      .from("class_fees")
+      .select("amount")
+      .eq("classroom_id", selectedClassroomId)
+      .maybeSingle();
+    classFeeAmount = Number(classFeeData?.amount || 0);
+
     const { data: studentsData } = await supabase
       .from("students")
       .select("id, full_name")
@@ -229,6 +237,47 @@ export default async function FeesPage({ searchParams }) {
             <p className="text-xs text-stone-400">You aren't set as the homeroom teacher for any class yet.</p>
           )}
         </div>
+
+        {selectedClassroomId && (
+          <div className="bg-white rounded-xl border border-stone-200 p-4 mb-4 space-y-3">
+            <p className="text-sm font-medium text-ink">This term's fee for this class</p>
+            <p className="text-xs text-stone-400">
+              Set the amount, then apply it to add it on top of what every active student in this class already owes
+              (their existing balance is kept, not replaced).
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <form action={setClassFee} className="flex items-center gap-1.5">
+                <input type="hidden" name="classroomId" value={selectedClassroomId} />
+                <span className="text-xs text-stone-400">GHS</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  name="amount"
+                  defaultValue={classFeeAmount || ""}
+                  placeholder="e.g. 1200"
+                  className="w-24 rounded-lg border border-stone-300 px-2 py-1.5 text-sm"
+                />
+                <button
+                  type="submit"
+                  className="text-xs font-medium bg-stone-200 text-ink px-3 py-1.5 rounded-lg hover:bg-stone-300"
+                >
+                  Save
+                </button>
+              </form>
+              <form action={applyClassFee}>
+                <input type="hidden" name="classroomId" value={selectedClassroomId} />
+                <button
+                  type="submit"
+                  disabled={classFeeAmount <= 0}
+                  className="text-xs font-medium bg-pine text-paper px-3 py-1.5 rounded-lg hover:bg-pine/90 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Apply GHS {classFeeAmount} to all students in this class
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
 
         {selectedClassroomId && (
           <div className="bg-white rounded-xl border border-stone-200 overflow-hidden mb-6">
