@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import Sidebar from "@/components/Sidebar";
 import AutoSubmitSelect from "@/components/AutoSubmitSelect";
+import SubmitButton from "@/components/SubmitButton";
 import { ensureFeeSetup, changeFrequency, saveRecurringMonth, saveTuitionMonth, updateFeeAmount, setClassFee, applyClassFee } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -120,14 +121,16 @@ export default async function FeesPage({ searchParams }) {
   let classStudents = [];
   let statusByStudent = {};
   let classFeeAmount = 0;
+  let classFeeAlreadyApplied = false;
 
   if (selectedClassroomId) {
     const { data: classFeeData } = await supabase
       .from("class_fees")
-      .select("amount")
+      .select("amount, updated_at, applied_at")
       .eq("classroom_id", selectedClassroomId)
       .maybeSingle();
     classFeeAmount = Number(classFeeData?.amount || 0);
+    classFeeAlreadyApplied = !!(classFeeData?.applied_at && classFeeData.applied_at >= classFeeData.updated_at);
 
     const { data: studentsData } = await supabase
       .from("students")
@@ -267,15 +270,22 @@ export default async function FeesPage({ searchParams }) {
               </form>
               <form action={applyClassFee}>
                 <input type="hidden" name="classroomId" value={selectedClassroomId} />
-                <button
-                  type="submit"
-                  disabled={classFeeAmount <= 0}
+                <SubmitButton
+                  disabled={classFeeAmount <= 0 || classFeeAlreadyApplied}
+                  pendingLabel="Applying…"
                   className="text-xs font-medium bg-pine text-paper px-3 py-1.5 rounded-lg hover:bg-pine/90 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  Apply GHS {classFeeAmount} to all students in this class
-                </button>
+                  {classFeeAlreadyApplied
+                    ? `Already applied (GHS ${classFeeAmount})`
+                    : `Apply GHS ${classFeeAmount} to all students in this class`}
+                </SubmitButton>
               </form>
             </div>
+            {classFeeAlreadyApplied && (
+              <p className="text-[11px] text-stone-400">
+                This amount has already been added to every student's balance. Change the amount above and Save to apply a new charge.
+              </p>
+            )}
           </div>
         )}
 
