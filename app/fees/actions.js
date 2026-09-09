@@ -69,11 +69,17 @@ export async function applyClassFee(formData) {
 
   const { data: classFee } = await supabase
     .from("class_fees")
-    .select("amount")
+    .select("amount, updated_at, applied_at")
     .eq("classroom_id", classroomId)
     .maybeSingle();
   const amount = Number(classFee?.amount || 0);
   if (amount <= 0) return;
+
+  // Already applied for this exact saved amount — a repeat click, a
+  // double-click, or a second submission before the page reloaded is a
+  // no-op instead of charging every student again. Changing the amount
+  // (Save) updates updated_at and re-enables applying for the new figure.
+  if (classFee?.applied_at && classFee.applied_at >= classFee.updated_at) return;
 
   const { data: students } = await supabase
     .from("students")
@@ -91,6 +97,8 @@ export async function applyClassFee(formData) {
     const newTotal = Number(plan?.total_amount || 0) + amount;
     await supabase.from("tuition_plans").update({ total_amount: newTotal }).eq("student_id", s.id);
   }
+
+  await supabase.from("class_fees").update({ applied_at: new Date().toISOString() }).eq("classroom_id", classroomId);
 
   revalidatePath("/fees");
   revalidatePath("/fees-owing");
