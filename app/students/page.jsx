@@ -71,6 +71,21 @@ export default async function StudentsPage({ searchParams }) {
               />
             </div>
             <div className="col-span-2">
+              <label className="text-xs font-medium text-stone-500">Tuition amount owed (GHS)</label>
+              <input
+                name="tuitionAmount"
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                className="w-full mt-1 rounded-lg border border-stone-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine/40"
+                placeholder="e.g. 1200"
+              />
+              <p className="text-[11px] text-stone-400 mt-1">
+                For students moving over from paper records, enter what they currently owe.
+              </p>
+            </div>
+            <div className="col-span-2">
               <label className="text-xs font-medium text-stone-500">Guardian full name</label>
               <input
                 name="guardianName"
