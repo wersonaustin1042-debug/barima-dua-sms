@@ -25,6 +25,78 @@ async function studentIdForFee(supabase, feeId) {
   return fee?.student_id;
 }
 
+async function isAdminLikeRole(supabase, user) {
+  const { data: myProfile } = await supabase.from("profiles").select("role").eq("id", user?.id).single();
+  return myProfile?.role !== "teacher";
+}
+
+// Sets (or updates) this term's fee for a whole class. This is just the
+// figure staff want to charge everyone in the class this term — it doesn't
+// touch any student's balance by itself. Use applyClassFee to actually
+// push it onto students.
+export async function setClassFee(formData) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!(await isAdminLikeRole(supabase, user))) return;
+  const classroomId = formData.get("classroomId");
+  const amount = Number(formData.get("amount"));
+  if (!classroomId || Number.isNaN(amount)) return;
+
+  await supabase
+    .from("class_fees")
+    .upsert(
+      { classroom_id: classroomId, amount, updated_at: new Date().toISOString() },
+      { onConflict: "classroom_id" }
+    );
+  revalidatePath("/fees");
+}
+
+// Adds the class's current-term fee on top of every active student's
+// existing tuition balance in that class. Whatever a student already owed
+// (e.g. carried over from a previous term, or from paper records at
+// enrollment) is left as-is — this stacks the new charge on top of it,
+// it never overwrites it.
+export async function applyClassFee(formData) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!(await isAdminLikeRole(supabase, user))) return;
+  const classroomId = formData.get("classroomId");
+  if (!classroomId) return;
+
+  const { data: classFee } = await supabase
+    .from("class_fees")
+    .select("amount")
+    .eq("classroom_id", classroomId)
+    .maybeSingle();
+  const amount = Number(classFee?.amount || 0);
+  if (amount <= 0) return;
+
+  const { data: students } = await supabase
+    .from("students")
+    .select("id")
+    .eq("classroom_id", classroomId)
+    .eq("status", "active");
+
+  for (const s of students || []) {
+    await ensureFeeSetup(s.id);
+    const { data: plan } = await supabase
+      .from("tuition_plans")
+      .select("total_amount")
+      .eq("student_id", s.id)
+      .single();
+    const newTotal = Number(plan?.total_amount || 0) + amount;
+    await supabase.from("tuition_plans").update({ total_amount: newTotal }).eq("student_id", s.id);
+  }
+
+  revalidatePath("/fees");
+  revalidatePath("/fees-owing");
+  revalidatePath("/parent");
+}
+
 // Makes sure a student has a tuition plan and a combined canteen+transport
 // fee row — but only if that student is actually signed up for it, so a
 // student who opts out never shows a canteen/transport debt.
