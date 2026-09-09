@@ -19,6 +19,7 @@ export async function enrollStudent(formData) {
   const fullName = formData.get("fullName");
   const levelId = formData.get("levelId");
   const section = formData.get("section");
+  const tuitionAmount = formData.get("tuitionAmount");
   const dob = formData.get("dob") || null;
   const guardianName = formData.get("guardianName") || null;
   const guardianPhone = formData.get("guardianPhone") || null;
@@ -58,8 +59,13 @@ export async function enrollStudent(formData) {
     .single();
   if (error) throw new Error(error.message);
 
-  // Every student starts with a tuition plan so Fees works immediately
-  await supabase.from("tuition_plans").insert({ student_id: student.id });
+  // Every student starts with a tuition plan so Fees works immediately.
+  // The amount is set here by whoever enrolls them (e.g. what a paper-record
+  // student already owes), rather than a fixed fee for every student.
+  await supabase.from("tuition_plans").insert({
+    student_id: student.id,
+    total_amount: Number(tuitionAmount),
+  });
 
   if (photoFile && photoFile.size > 0) {
     const photoUrl = await uploadStudentPhoto(supabase, student.id, photoFile);
