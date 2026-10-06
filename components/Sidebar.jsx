@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 const ADMIN_LIKE = ["admin", "director", "headmaster", "assistant_headmaster"];
 const ALL_NAV = [
   { href: "/dashboard", label: "Dashboard", roles: [...ADMIN_LIKE, "accountant"] },
+  { href: "/notices", label: "Notice board", roles: [...ADMIN_LIKE, "accountant", "teacher", "parent"] },
   { href: "/students", label: "Enrollment", roles: ADMIN_LIKE },
   { href: "/promotion", label: "Promotion", roles: ADMIN_LIKE },
   { href: "/attendance", label: "Attendance", roles: [...ADMIN_LIKE, "teacher"] },
