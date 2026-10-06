@@ -25,7 +25,26 @@ export default async function GradesPage({ searchParams }) {
       a.academic_levels.sort_order - b.academic_levels.sort_order ||
       a.section.localeCompare(b.section)
   );
-if (myProfile?.role === "teacher") { const { data: assignedRows } = await supabase .from("teacher_classrooms") .select("classroom_id") .eq("teacher_id", user.id); const assignedIds = new Set((assignedRows || []).map((r) => r.classroom_id)); classrooms = classrooms.filter((c) => assignedIds.has(c.id)); }
+  const isTeacher = myProfile?.role === "teacher";
+  let allowedSubjectIds = null; // null = unrestricted (admin-like roles)
+
+  if (isTeacher) {
+    const { data: assignedRows } = await supabase
+      .from("teacher_classrooms")
+      .select("classroom_id")
+      .eq("teacher_id", user.id);
+    const assignedIds = new Set((assignedRows || []).map((r) => r.classroom_id));
+    classrooms = classrooms.filter((c) => assignedIds.has(c.id));
+
+    if (selectedClassroomId) {
+      const { data: subjectRows } = await supabase
+        .from("teacher_subjects")
+        .select("subject_id")
+        .eq("teacher_id", user.id)
+        .eq("classroom_id", selectedClassroomId);
+      allowedSubjectIds = new Set((subjectRows || []).map((r) => r.subject_id));
+    }
+  }
   const { data: subjects } = await supabase.from("subjects").select("id, name, category").order("name");
 
   let students = [];
@@ -38,7 +57,10 @@ if (myProfile?.role === "teacher") { const { data: assignedRows } = await supaba
     levelCategory = activeClassroom && activeClassroom.academic_levels.sort_order <= 5 ? "preschool" : "primary_jhs";
   }
 
-  const filteredSubjects = (subjects || []).filter((s) => s.category === levelCategory);
+  let filteredSubjects = (subjects || []).filter((s) => s.category === levelCategory);
+  if (allowedSubjectIds) {
+    filteredSubjects = filteredSubjects.filter((s) => allowedSubjectIds.has(s.id));
+  }
 
   if (selectedClassroomId) {
     const { data: studentsData } = await supabase
@@ -105,6 +127,12 @@ if (myProfile?.role === "teacher") { const { data: assignedRows } = await supaba
 
         {selectedClassroomId && (
           <>
+            {isTeacher && filteredSubjects.length === 0 && (
+              <p className="text-sm text-stone-400 bg-stone-50 border border-stone-200 rounded-lg p-3 mb-4">
+                You haven't been assigned any subjects for this class yet — ask an admin to set that up under
+                Staff & parents → Teacher class assignments.
+              </p>
+            )}
             <form method="GET" className="flex flex-wrap gap-3 mb-4">
               <input type="hidden" name="classroomId" value={selectedClassroomId} />
               <AutoSubmitSelect

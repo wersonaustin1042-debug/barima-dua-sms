@@ -39,6 +39,20 @@ export async function saveAllMarks(formData) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Teachers may only grade subjects an admin has assigned to them for this class.
+  const { data: myProfile } = await supabase.from("profiles").select("role").eq("id", user?.id).single();
+  if (myProfile?.role === "teacher") {
+    const { data: allowedRows } = await supabase
+      .from("teacher_subjects")
+      .select("subjects(name)")
+      .eq("teacher_id", user.id)
+      .eq("classroom_id", classroomId);
+    const allowed = (allowedRows || []).some((r) => r.subjects?.name === subjectName);
+    if (!allowed) {
+      throw new Error("You're not assigned to teach this subject for this class.");
+    }
+  }
+
   // Ensure the three exam rows exist for this subject/term/classroom, and get their ids
   const examIds = {};
   for (const [examType, totalMarks] of Object.entries(TOTALS)) {
