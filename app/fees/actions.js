@@ -91,11 +91,15 @@ export async function applyClassFee(formData) {
     await ensureFeeSetup(s.id);
     const { data: plan } = await supabase
       .from("tuition_plans")
-      .select("total_amount")
+      .select("total_amount, standard_amount")
       .eq("student_id", s.id)
       .single();
     const newTotal = Number(plan?.total_amount || 0) + amount;
-    await supabase.from("tuition_plans").update({ total_amount: newTotal }).eq("student_id", s.id);
+    const newStandard = Number(plan?.standard_amount || 0) + amount;
+    await supabase
+      .from("tuition_plans")
+      .update({ total_amount: newTotal, standard_amount: newStandard })
+      .eq("student_id", s.id);
   }
 
   await supabase.from("class_fees").update({ applied_at: new Date().toISOString() }).eq("classroom_id", classroomId);
@@ -120,7 +124,21 @@ export async function ensureFeeSetup(studentId) {
     .eq("student_id", studentId)
     .maybeSingle();
   if (!plan) {
-    await supabase.from("tuition_plans").insert({ student_id: studentId, total_amount: 1200, amount_paid: 0 });
+    // Default tuition is set by the school's admin in the app (fee_settings);
+    // nothing is preset, so it's 0 until they set it.
+    const { data: setting } = await supabase
+      .from("fee_settings")
+      .select("value")
+      .eq("key", "default_tuition")
+      .maybeSingle();
+    const standard = Number(setting?.value ?? 0);
+    await supabase.from("tuition_plans").insert({
+      student_id: studentId,
+      standard_amount: standard,
+      discount_amount: 0,
+      total_amount: standard,
+      amount_paid: 0,
+    });
   }
 
   const { data: studentFlags } = await supabase
@@ -180,6 +198,52 @@ export async function setServiceFlags(formData) {
   revalidatePath("/fees-owing");
   revalidatePath("/parent");
 }
+// Admin / director only. Recomputes total_amount (= standard - discount) so
+// every page that reads it (fees-owing, fees-overview, report cards, parent
+// portal, dashboard) keeps working unchanged — they only ever see the net
+// amount owed.
+async function isAdminOrDirector(supabase, user) {
+  const { data: myProfile } = await supabase.from("profiles").select("role").eq("id", user?.id).single();
+  return myProfile?.role === "admin" || myProfile?.role === "director";
+}
+
+export async function updateTuitionAmounts(formData) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!(await isAdminOrDirector(supabase, user))) return;
+  const studentId = formData.get("studentId");
+  const standardAmount = Number(formData.get("standardAmount"));
+  const discountAmount = Number(formData.get("discountAmount"));
+  if (!studentId) return;
+  if (Number.isNaN(standardAmount) || standardAmount < 0) return;
+  if (Number.isNaN(discountAmount) || discountAmount < 0) return;
+
+  const total = Math.max(standardAmount - discountAmount, 0);
+  await supabase
+    .from("tuition_plans")
+    .update({ standard_amount: standardAmount, discount_amount: discountAmount, total_amount: total })
+    .eq("student_id", studentId);
+  revalidatePath("/fees");
+  revalidatePath("/fees-owing");
+  revalidatePath("/parent");
+}
+
+// Changes the standard tuition new plans get by default. Does not touch any
+// existing student's tuition_plans row. Admin / director only.
+export async function updateDefaultTuition(formData) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!(await isAdminOrDirector(supabase, user))) return;
+  const value = Number(formData.get("defaultTuition"));
+  if (Number.isNaN(value) || value < 0) return;
+  await supabase.from("fee_settings").upsert({ key: "default_tuition", value });
+  revalidatePath("/fees");
+}
+
 export async function changeFrequency(formData) {
   const supabase = createClient();
   const feeId = formData.get("feeId");
