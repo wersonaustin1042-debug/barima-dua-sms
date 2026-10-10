@@ -132,9 +132,18 @@ export async function assignTeacherToClassrooms(formData) {
   const teacherId = formData.get("teacherId");
   const classroomIds = formData.getAll("classroomIds").filter(Boolean);
   if (!teacherId || classroomIds.length === 0) return;
-  await supabase
+  // A plain insert is rejected as a whole if even one picked class is already
+  // assigned to this teacher (primary key = teacher + classroom), so nothing
+  // got saved and nothing was shown. Classes they already have are skipped
+  // instead, and the rest go through.
+  const { error } = await supabase
     .from("teacher_classrooms")
-    .insert(classroomIds.map((id) => ({ teacher_id: teacherId, classroom_id: id })));
+    .upsert(
+      classroomIds.map((id) => ({ teacher_id: teacherId, classroom_id: id })),
+      { onConflict: "teacher_id,classroom_id", ignoreDuplicates: true }
+    );
+  // Any other failure used to vanish silently; surface it.
+  if (error) throw new Error(`Could not assign classes: ${error.message}`);
   revalidatePath("/users");
 }
 export async function unassignTeacherFromClassroom(formData) {
