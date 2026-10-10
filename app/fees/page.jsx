@@ -118,9 +118,10 @@ export default async function FeesPage({ searchParams }) {
     selectedClassroomId = undefined;
   }
 
-  // Only admin / director may change tuition amounts or give discounts
-  // (matches the database policies on tuition_plans).
-  const canManage = myProfile?.role === "admin" || myProfile?.role === "director";
+  // Admin, director, headmaster and assistant headmaster may change tuition
+  // amounts or give discounts (same as GFA; matches is_admin_like() in the
+  // database policies on tuition_plans).
+  const canManage = ["admin", "director", "headmaster", "assistant_headmaster"].includes(myProfile?.role);
 
   const { data: defaultTuitionSetting } = await supabase
     .from("fee_settings")

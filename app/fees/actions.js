@@ -198,13 +198,14 @@ export async function setServiceFlags(formData) {
   revalidatePath("/fees-owing");
   revalidatePath("/parent");
 }
-// Admin / director only. Recomputes total_amount (= standard - discount) so
-// every page that reads it (fees-owing, fees-overview, report cards, parent
-// portal, dashboard) keeps working unchanged — they only ever see the net
-// amount owed.
+// Admin / director / headmaster / assistant headmaster only (the same roles
+// as is_admin_like() in the database, and as GFA). Recomputes total_amount
+// (= standard - discount) so every page that reads it (fees-owing,
+// fees-overview, report cards, parent portal, dashboard) keeps working
+// unchanged — they only ever see the net amount owed.
 async function isAdminOrDirector(supabase, user) {
   const { data: myProfile } = await supabase.from("profiles").select("role").eq("id", user?.id).single();
-  return myProfile?.role === "admin" || myProfile?.role === "director";
+  return ["admin", "director", "headmaster", "assistant_headmaster"].includes(myProfile?.role);
 }
 
 export async function updateTuitionAmounts(formData) {
