@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import Sidebar from "@/components/Sidebar";
 import { linkParentToChild, assignTeacherToClassrooms, unassignTeacherFromClassroom, setClassTeacher, assignTeacherSubjects } from "./actions";
 import CreateUserForm from "./CreateUserForm";
+import ResetPasswordButton from "./ResetPasswordButton";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +62,15 @@ export default async function UsersPage() {
       subjectOptions: (allSubjects || []).filter((s) => s.category === category),
     });
   });
+
+  // Who is looking at this page, so the Reset password button can be hidden
+  // for their own row and for admin/director accounts they may not reset.
+  const {
+    data: { user: me },
+  } = await supabase.auth.getUser();
+  const myRole = (profiles || []).find((p) => p.id === me?.id)?.role;
+  const topRoles = ["admin", "director"];
+  const canReset = (p) => p.id !== me?.id && (!topRoles.includes(p.role) || topRoles.includes(myRole));
 
   const teachers = (profiles || []).filter((p) => p.role === "teacher");
   const parents = (profiles || []).filter((p) => p.role === "parent");
@@ -252,6 +262,7 @@ export default async function UsersPage() {
                 <th className="text-left px-4 py-2 font-medium">Name</th>
                 <th className="text-left px-4 py-2 font-medium">Role</th>
                 <th className="text-left px-4 py-2 font-medium">Phone</th>
+                <th className="text-left px-4 py-2 font-medium">Password</th>
               </tr>
             </thead>
             <tbody>
@@ -260,6 +271,7 @@ export default async function UsersPage() {
                   <td className="px-4 py-2 text-ink">{p.full_name}</td>
                   <td className="px-4 py-2 text-stone-500">{ROLE_LABELS[p.role] || p.role}</td>
                   <td className="px-4 py-2 text-stone-500">{p.phone || "—"}</td>
+                  <td className="px-4 py-2">{canReset(p) ? <ResetPasswordButton userId={p.id} /> : null}</td>
                 </tr>
               ))}
             </tbody>

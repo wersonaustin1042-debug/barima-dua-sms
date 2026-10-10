@@ -16,7 +16,21 @@ export default function CreateUserForm({ classrooms, students }) {
         <p className="text-sm text-clay bg-clay/10 border border-clay/30 rounded-lg px-3 py-2">{state.error}</p>
       )}
       {state?.success && (
-        <p className="text-sm text-pine bg-pine/10 border border-pine/30 rounded-lg px-3 py-2">{state.success}</p>
+        <div className="text-sm text-pine bg-pine/10 border border-pine/30 rounded-lg px-3 py-2 space-y-1">
+          <p>{state.success}</p>
+          {state.tempPassword && (
+            <>
+              <p className="text-ink">
+                Temporary password for {state.tempEmail}:{" "}
+                <span className="font-mono font-semibold select-all">{state.tempPassword}</span>
+              </p>
+              <p className="text-xs text-stone-500">
+                Shown only now. Give it to them privately. They will be asked to choose their own password
+                the first time they sign in, and you won't be able to see that one.
+              </p>
+            </>
+          )}
+        </div>
       )}
 
       <div className="grid grid-cols-2 gap-3">
@@ -27,10 +41,6 @@ export default function CreateUserForm({ classrooms, students }) {
         <div className="col-span-2">
           <label className="text-xs font-medium text-stone-500">Email</label>
           <input name="email" type="email" required className="w-full mt-1 rounded-lg border border-stone-300 px-3 py-2 text-sm" />
-        </div>
-        <div>
-          <label className="text-xs font-medium text-stone-500">Password</label>
-          <input name="password" type="text" required minLength={6} placeholder="min 6 characters" className="w-full mt-1 rounded-lg border border-stone-300 px-3 py-2 text-sm" />
         </div>
         <div>
           <label className="text-xs font-medium text-stone-500">Phone (optional)</label>
@@ -73,6 +83,9 @@ export default function CreateUserForm({ classrooms, students }) {
           </select>
         </div>
       </div>
+      <p className="text-xs text-stone-400">
+        A random temporary password is generated for you. The person sets their own password at first sign-in.
+      </p>
       <button type="submit" className="bg-pine text-paper text-sm font-medium px-4 py-2 rounded-lg hover:bg-pine/90">
         Create login
       </button>

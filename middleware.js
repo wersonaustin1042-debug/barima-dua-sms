@@ -27,6 +27,14 @@ export async function middleware(request) {
   } = await supabase.auth.getUser();
 
   const isAuthPage = request.nextUrl.pathname.startsWith("/login");
+  const isChangePasswordPage = request.nextUrl.pathname.startsWith("/change-password");
+
+  // An admin created or reset this account with a temporary password: block
+  // everything until they've chosen their own. app_metadata can only be set
+  // by the server (service role), so users can't clear this flag themselves.
+  if (user && user.app_metadata?.must_change_password === true && !isChangePasswordPage) {
+    return NextResponse.redirect(new URL("/change-password", request.url));
+  }
 
   if (!user && !isAuthPage) {
     return NextResponse.redirect(new URL("/login", request.url));

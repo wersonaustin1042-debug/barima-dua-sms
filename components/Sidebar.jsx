@@ -79,6 +79,9 @@ export default function Sidebar() {
             </Link>
           ))}
         </nav>
+        <Link href="/change-password" className="text-sm text-stone-400 hover:text-pine text-left px-3 py-2">
+          Change password
+        </Link>
         <button onClick={signOut} className="text-sm text-stone-400 hover:text-clay text-left px-3 py-2">
           Sign out
         </button>
@@ -125,6 +128,12 @@ export default function Sidebar() {
                 {label}
               </Link>
             ))}
+            <Link
+              href="/change-password"
+              className="text-left px-3 py-2 rounded-lg text-sm font-medium text-stone-400 hover:text-pine hover:bg-stone-100"
+            >
+              Change password
+            </Link>
             <button
               onClick={signOut}
               className="text-left px-3 py-2 rounded-lg text-sm font-medium text-stone-400 hover:text-clay hover:bg-stone-100"
